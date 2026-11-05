@@ -205,7 +205,7 @@ function patchScore(a,b,x,y,dx,dy){
 // Optional OpenCV.js tracker: tracks actual features with pyramidal Lucas-Kanade
 // and estimates a perspective homography using RANSAC. Falls back to the
 // lightweight tracker when OpenCV is unavailable.
-let cvReady=false,cvLast=null,cvCorners=null,cvFeatures=null,cvBusy=false;
+let cvReady=false,cvLast=null,cvCorners=null,cvFeatures=null,cvBusy=false,trackingConfidence=0;
 const cvScript=document.createElement('script');
 cvScript.async=true;cvScript.src='https://docs.opencv.org/4.x/opencv.js';
 cvScript.onload=()=>{let checks=0;const wait=()=>{if(window.cv&&cv.Mat&&cv.calcOpticalFlowPyrLK&&cv.findHomography){cvReady=true;resetWorkerTracking();if(tracking&&previous)seedCV(previous)}else if(++checks<100)setTimeout(wait,300);else console.warn('OpenCV initialization timed out')};wait()};
@@ -259,7 +259,7 @@ function trackCV(gray){
   H=cv.findHomography(src,dst,cv.RANSAC,2.5,inlierMask,1000,.99);
   if(H.empty()){lostFrames++;return false}
   let count=0;for(let i=0;i<kept.length;i++)if(inlierMask.data[i])count++;
-  if(count<10||count/kept.length<.62){lostFrames++;return false}
+  if(count<12||count/kept.length<.72){trackingConfidence=0;lostFrames++;return false}
   const d=H.type()===cv.CV_64FC1?H.data64F:H.data32F;
   const sx=probe.width/canvas.width,sy=probe.height/canvas.height;
   const projected=points.map(q=>{
@@ -272,9 +272,9 @@ function trackCV(gray){
    oldArea*newArea<=0||Math.abs(newArea/oldArea)<.65||Math.abs(newArea/oldArea)>1.5){
    lostFrames++;return false;
   }
-  const alpha=count/kept.length>.8?.88:.7;
+  const alpha=count/kept.length>.85?.8:.65;
   points=points.map((q,i)=>[q[0]*(1-alpha)+projected[i][0]*alpha,q[1]*(1-alpha)+projected[i][1]*alpha]);
-  lostFrames=0;hint.textContent='מעקב פעיל · הדלת עוקבת אחרי תנועת המצלמה';
+  trackingConfidence=count/kept.length;lostFrames=0;hint.textContent='מעקב פעיל · '+Math.round(trackingConfidence*100)+'%';
   // Keep only geometrically consistent features, not drifting or occluded pixels.
   const tracked=[];
   for(let j=0;j<kept.length;j++)if(inlierMask.data[j])tracked.push(b[j*2],b[j*2+1]);
@@ -302,22 +302,22 @@ function ensureTrackerWorker(){
    trackerPending=false;clearTimeout(trackerTimer);
    if(!tracking||!stream||photo||editCorners||markOpening||drag>=0)return;
    if(r.ready)return;
-   if(!r.ok){lostFrames++;if(lostFrames>=5)loseTracking();return}
+   if(!r.ok){trackingConfidence=0;lostFrames++;hint.textContent='מעקב לא יציב · מחפשים נקודות ייחוס';if(lostFrames>=4)loseTracking();return}
    const sx=canvas.width/probe.width,sy=canvas.height/probe.height;
    const projected=r.proposed.map(p=>[p[0]*sx,p[1]*sy]);
-   if(!validDoorQuad(projected)||projected.some((p,i)=>Math.hypot(p[0]-points[i][0],p[1]-points[i][1])>canvas.width*.16)){
-    lostFrames++;if(lostFrames>=5)loseTracking();return;
+   if(!validDoorQuad(projected)||projected.some((p,i)=>Math.hypot(p[0]-points[i][0],p[1]-points[i][1])>canvas.width*.12)){
+    lostFrames++;if(lostFrames>=4)loseTracking();return;
    }
    const alpha=r.confidence>.8?.8:.65;
    points=points.map((p,i)=>[p[0]*(1-alpha)+projected[i][0]*alpha,p[1]*(1-alpha)+projected[i][1]*alpha]);
-   lostFrames=0;hint.textContent='מעקב פעיל · ניתן להתאים פינות';draw();
+   trackingConfidence=r.confidence;lostFrames=0;hint.textContent='מעקב פעיל · '+Math.round(trackingConfidence*100)+'%';draw();
   };
   trackerWorker.onerror=e=>{console.warn('Tracker worker failed',e.message);resetWorkerTracking();loseTracking()};
   return true;
  }catch(e){console.warn('Tracker worker unavailable',e);return false}
 }
 function loseTracking(){
- tracking=false;found=false;previous=null;resetCV();resetWorkerTracking();
+ tracking=false;found=false;previous=null;trackingConfidence=0;resetCV();resetWorkerTracking();
  autoSearch=!manualLock;autoCandidate=null;autoCandidateCount=0;lastSearch=0;
  hint.textContent='המעקב אבד · כוונו שוב לפתח או סמנו ידנית';draw();
 }
@@ -327,7 +327,7 @@ function updateTracking(){
  const current=captureGray();if(!current)return;
  if(cvReady){
   if(trackCV(current)){previous=current;return}
-  if(lostFrames>=5)loseTracking();
+  if(lostFrames>=4)loseTracking();
   previous=current;return;
  }
  if(!ensureTrackerWorker()){loseTracking();return}
