@@ -61,25 +61,9 @@ window.addEventListener('message',e=>{if(!['https://www.unidoors.co.il','https:/
  };
  im.onerror=()=>{hint.textContent='לא ניתן לטעון את תמונת הדלת'};im.src=e.data.image});const palette=[['אפור כהה','#394650'],['לבן','#e9e5da'],['עץ','#946542'],['שחור','#15191c'],['כחול','#244b75']];function initPoints(){const w=canvas.width,h=canvas.height;points=[[w*.26,h*.14],[w*.74,h*.14],[w*.74,h*.87],[w*.26,h*.87]]}function resize(){const r=stage.getBoundingClientRect(),old=points;const ratio=Math.min(window.devicePixelRatio||1,1.5);canvas.width=Math.round(r.width*ratio);canvas.height=Math.round(r.height*ratio);if(old){const sx=canvas.width/(resize.oldW||canvas.width),sy=canvas.height/(resize.oldH||canvas.height);points=old.map(p=>[p[0]*sx,p[1]*sy])}else initPoints();resize.oldW=canvas.width;resize.oldH=canvas.height;draw()}window.addEventListener('resize',resize);
 function trimDoorImage(image){
- // Preserve all visible configurator pixels, including translucent glass and
- // anti-aliased decoration. Do not force alpha to 255 or trim the frame tightly.
- const w=image.naturalWidth,h=image.naturalHeight;
- const c=document.createElement('canvas');c.width=w;c.height=h;
- const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(image,0,0);
- let data;try{data=x.getImageData(0,0,w,h).data}catch(e){return image}
- let left=w,top=h,right=-1,bottom=-1;
- for(let y=0;y<h;y+=2)for(let xx=0;xx<w;xx+=2){
-  const i=(y*w+xx)*4;if(data[i+3]>2){left=Math.min(left,xx);right=Math.max(right,xx);top=Math.min(top,y);bottom=Math.max(bottom,y)}
- }
- if(right<left||bottom<top)return image;
- // Retain generous padding around the outer frame; only remove transparent
- // screenshot margins. A tight crop previously clipped top decorations.
- const padX=Math.max(10,Math.round(w*.025)),padY=Math.max(12,Math.round(h*.025));
- left=Math.max(0,left-padX);right=Math.min(w-1,right+padX);
- top=Math.max(0,top-padY);bottom=Math.min(h-1,bottom+padY);
- const out=document.createElement('canvas');out.width=right-left+1;out.height=bottom-top+1;
- out.getContext('2d').drawImage(c,left,top,out.width,out.height,0,0,out.width,out.height);
- return out;
+ // The configurator supplies the entire door frame. Cropping by alpha
+ // can remove the lintel or narrow pale frame edges. Preserve it exactly.
+ return image;
 }
 
 function renderDoor(){if(doorCache)return doorCache;const c=document.createElement('canvas');c.width=420;c.height=840;const x=c.getContext('2d');x.fillStyle=style.color;x.fillRect(0,0,420,840);x.strokeStyle='#0008';x.lineWidth=12;x.strokeRect(9,9,402,822);x.strokeStyle='#ffffff20';x.lineWidth=3;x.strokeRect(29,29,362,782);if(style.window!=='none'){let wx=style.window==='slim'?270:66,wy=style.window==='slim'?65:65,ww=style.window==='slim'?72:288,wh=style.window==='slim'?440:270;x.fillStyle='#7c9ba9';x.fillRect(wx,wy,ww,wh);x.strokeStyle='#12181f';x.lineWidth=16;x.strokeRect(wx,wy,ww,wh);x.strokeStyle='#c7e7ff66';x.lineWidth=6;x.beginPath();x.moveTo(wx+15,wy+wh-20);x.lineTo(wx+ww-18,wy+20);x.stroke()}x.fillStyle=style.handle==='black'?'#111':style.handle==='gold'?'#c3a15a':'#c9d1d6';x.fillRect(315,440,12,98);x.fillRect(270,443,57,12);return doorCache=c}
@@ -138,6 +122,14 @@ function refinePhotoJambQuad(quad){
  }
  q[0][1]+=bestDy;q[1][1]+=bestDy;
  const minX=ox,maxX=ox+sw*scale,minY=oy,maxY=oy+sh*scale;
+ if(q.some(p=>p[0]<minX||p[0]>maxX||p[1]<minY||p[1]>maxY))return quad;
+ // The detector usually finds the inner leaf edge, whereas the captured
+ // product includes the entire frame. Expand gently toward the outer jamb.
+ const avgWidth=(Math.hypot(q[1][0]-q[0][0],q[1][1]-q[0][1])+Math.hypot(q[2][0]-q[3][0],q[2][1]-q[3][1]))/2;
+ const avgHeight=(Math.hypot(q[3][0]-q[0][0],q[3][1]-q[0][1])+Math.hypot(q[2][0]-q[1][0],q[2][1]-q[1][1]))/2;
+ const padX=avgWidth*.025,padTop=avgHeight*.035,padBottom=avgHeight*.008;
+ q[0][0]-=padX;q[3][0]-=padX;q[1][0]+=padX;q[2][0]+=padX;
+ q[0][1]-=padTop;q[1][1]-=padTop;q[2][1]+=padBottom;q[3][1]+=padBottom;
  if(q.some(p=>p[0]<minX||p[0]>maxX||p[1]<minY||p[1]>maxY))return quad;
  return validDoorQuad(q)?q:quad;
 }
