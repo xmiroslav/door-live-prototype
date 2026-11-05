@@ -54,7 +54,7 @@
     const viewer = window.open(VIEWER, '_blank');
     if (!viewer) { alert('Please allow popups for Unidoors'); return; }
     const button = document.getElementById('unidoors-ar-preview');
-    if (button) { button.disabled = true; button.textContent = 'מכין תצוגה…'; }
+    if (button) { button.disabled = true; button.textContent = '…'; }
     try {
       const lib = await loadLibrary();
       const image = await captureExactDoor(lib,target);
@@ -71,7 +71,7 @@
       alert('לא ניתן להכין את הדלת לתצוגה. בדוק תמונות חיצוניות ו-CORS.');
       viewer.close();
     } finally {
-      if (button) { button.disabled = false; button.textContent = 'הצג את הדלת בבית שלי'; }
+      if (button) { button.disabled = false; button.textContent = '🚪'; }
     }
   }
   function init() {
@@ -80,9 +80,11 @@
     const button = document.createElement('button');
     button.id = 'unidoors-ar-preview';
     button.type = 'button';
-    button.textContent = 'הצג את הדלת בבית שלי';
+    button.textContent = '🚪';
+    button.setAttribute('aria-label', 'הצג את הדלת בבית שלי');
+    button.title = 'הצג את הדלת בבית שלי';
     button.hidden = true;
-    button.style.cssText = 'display:none;position:fixed;right:max(16px,env(safe-area-inset-right));bottom:calc(20px + env(safe-area-inset-bottom));z-index:2147483000;max-width:calc(100vw - 32px);padding:15px 22px;border:0;border-radius:30px;background:#CD8080;color:#fff;font:600 16px Arial;line-height:1.3;box-shadow:0 8px 26px rgba(0,0,0,.24);cursor:pointer;touch-action:manipulation;direction:rtl';
+    button.style.cssText = 'display:none;position:fixed;right:max(18px,env(safe-area-inset-right));bottom:calc(104px + env(safe-area-inset-bottom));z-index:2147483000;width:62px;height:62px;padding:0;display:grid;place-items:center;border:1px solid rgba(255,255,255,.22);border-radius:50%;background:#34383e;color:#fff;font:400 30px Arial;line-height:1;box-shadow:0 6px 20px rgba(0,0,0,.28);cursor:pointer;touch-action:manipulation;direction:rtl';
     button.addEventListener('click', preview);
     document.body.appendChild(button);
     syncVisibility();
