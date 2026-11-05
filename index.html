@@ -101,11 +101,11 @@ function plausibleDoorAnchor(p){
  if(!p||p.length!==4)return false;
  const top=(p[0][1]+p[1][1])/2,bottom=(p[2][1]+p[3][1])/2;
  const height=bottom-top,width=(Math.hypot(p[1][0]-p[0][0],p[1][1]-p[0][1])+Math.hypot(p[2][0]-p[3][0],p[2][1]-p[3][1]))/2;
- if(height<canvas.height*(photo?.30:.32)||height>canvas.height*.96||width<canvas.width*.09)return false;
+ if(height<canvas.height*(photo?.16:.32)||height>canvas.height*.96||width<canvas.width*(photo?.045:.09))return false;
  if(!photo&&(bottom<canvas.height*.55||top>canvas.height*.63))return false;
  if(photo){const sw=photo.naturalWidth,sh=photo.naturalHeight,scale=Math.min(canvas.width/sw,canvas.height/sh),left=(canvas.width-sw*scale)/2,right=left+sw*scale,topBound=(canvas.height-sh*scale)/2,bottomBound=topBound+sh*scale;
   if(p.some(q=>q[0]<left-4||q[0]>right+4||q[1]<topBound-4||q[1]>bottomBound+4))return false;
-  if(bottom<topBound+(bottomBound-topBound)*.56)return false;
+  if(bottom<topBound+(bottomBound-topBound)*.46)return false;
  }
  return true;
 }
@@ -224,7 +224,7 @@ try{
   if(tracking&&cvReady&&previous)seedCV(previous);
   if(photo){tracking=false}
   editCorners=false;hideGuides=true;document.getElementById('adjust').classList.remove('active');
-  hint.textContent=photo?'זוהה פתח אפשרי · בדקו שהדלת מגיעה עד הרצפה ותקנו את ארבע הפינות':'הדלת מוצגת · לתיקון לחצו על התאמת פינות';
+  hint.textContent=photo?'הדלת הותאמה לתמונה · לתיקון בחרו התאמה ← התאמת פינות':'הדלת מוצגת · לתיקון לחצו על התאמת פינות';
   draw();
  };
  detectorWorker.onerror=e=>{console.warn('Door detector worker unavailable',e.message);detectorWorker.terminate();detectorWorker=null;invalidateDetection();if(photo&&!found){setBusy(null);markOpening=true;manualCorners=[];editCorners=false;hideGuides=true;hint.textContent='לא ניתן לזהות אוטומטית · סמנו ארבע פינות ידנית';draw()}};
