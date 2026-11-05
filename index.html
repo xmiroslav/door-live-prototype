@@ -48,7 +48,7 @@ function loadRoomPhoto(e){
  const f=e.target.files&&e.target.files[0];if(!f)return;
  const url=URL.createObjectURL(f),im=new Image();
  im.onload=()=>{
-  photo=im;if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}
+  invalidateDetection();photo=im;if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}
   video.srcObject=null;video.style.display='none';resetCV();tracking=false;found=false;
   autoSearch=false;manualLock=false;markOpening=false;manualCorners=[];editCorners=false;hideGuides=true;
   hint.textContent='מנתחים את צילום החדר…';draw();
@@ -68,7 +68,7 @@ function findOpeningPhoto(){
  // Reuse the detector, but only accept a stable still-image proposal after
  // three identical passes; show editable corners for user verification.
  autoCandidate=null;autoCandidateCount=0;
- if(detectorWorker){detectOpeningAsync();return}for(let i=0;i<3&&!found;i++)findOpening();
+ if(detectorWorker){detectOpeningAsync();return}detectOpeningAsync();return;
  if(found){
   tracking=false;previous=null;resetCV();editCorners=true;hideGuides=false;
   document.getElementById('adjust').classList.add('active');
@@ -109,12 +109,13 @@ function gradients(gray){
 }
 // Detector runs off the UI thread; the existing synchronous implementation
 // remains as a fallback if workers are blocked by browser or deployment settings.
-let detectorWorker=null,detectorPending=false,detectorSeq=0,detectorTimeout=0;
+let detectorWorker=null,detectorPending=false,detectorSeq=0,detectorTimeout=0,detectorEpoch=0,detectorMode='';
+function invalidateDetection(){detectorEpoch++;detectorPending=false;clearTimeout(detectorTimeout);detectorSeq++;}
 try{
  detectorWorker=new Worker(new URL('./door-detector-worker.js',location.href));
  detectorWorker.onmessage=e=>{
   detectorPending=false;clearTimeout(detectorTimeout);
-  const result=e.data;if(!result||result.id!==detectorSeq||found||editCorners||markOpening||(!photo&&!stream))return;
+  const result=e.data;if(!result||result.id!==detectorSeq||result.epoch!==detectorEpoch||result.mode!==(photo?'photo':'live')||found||editCorners||markOpening||(!photo&&!stream))return;
   if(!result.best){searchFailures++;hint.textContent='לא זוהה פתח · אפשר לבחור סימון ידני';return}
   if(!result.stable){hint.textContent='זוהה פתח אפשרי · מאמתים…';return}
   const [l,t,r,b]=result.best,sx=canvas.width/probe.width,sy=canvas.height/probe.height;
@@ -128,16 +129,16 @@ try{
   hint.textContent=photo?'זוהה פתח אפשרי · בדקו והתאימו את הפינות':'הדלת מוצגת · לתיקון לחצו על התאמת פינות';
   draw();
  };
- detectorWorker.onerror=e=>{console.warn('Door detector worker unavailable',e.message);detectorWorker.terminate();detectorWorker=null;detectorPending=false;clearTimeout(detectorTimeout)};
+ detectorWorker.onerror=e=>{console.warn('Door detector worker unavailable',e.message);detectorWorker.terminate();detectorWorker=null;invalidateDetection();if(photo&&!found)findOpeningPhoto()};
 }catch(e){console.warn('Worker disabled',e)}
 function detectOpeningAsync(){
- if(!detectorWorker){findOpening();return}
+ if(!detectorWorker){if(photo){for(let i=0;i<3&&!found;i++)findOpening();if(found){tracking=false;previous=null;resetCV();editCorners=true;hideGuides=false;document.getElementById('adjust').classList.add('active');hint.textContent='זוהה פתח אפשרי · בדקו והתאימו את הפינות';draw()}else{markOpening=true;manualCorners=[];hint.textContent='סמנו ארבע פינות של הפתח';draw()}}else findOpening();return}
  if(detectorPending||found||editCorners||markOpening)return;
  const gray=captureGray();if(!gray)return;
- detectorPending=true;const id=++detectorSeq;
- detectorTimeout=setTimeout(()=>{if(detectorPending&&id===detectorSeq){detectorPending=false;detectorWorker?.terminate();detectorWorker=null;hint.textContent='מצב חיפוש חלופי פעיל'}},4500);
+ detectorPending=true;const id=++detectorSeq,epoch=detectorEpoch,mode=photo?'photo':'live';
+ detectorTimeout=setTimeout(()=>{if(detectorPending&&id===detectorSeq&&epoch===detectorEpoch){detectorPending=false;detectorWorker?.terminate();detectorWorker=null;hint.textContent='מצב חיפוש חלופי פעיל';if(photo&&!found)findOpeningPhoto()}},4500);
  const target=targetCenter?targetCenter.slice():null;
- detectorWorker.postMessage({id,w:probe.width,h:probe.height,buffer:gray.buffer,target,still:!!photo},[gray.buffer]);
+ detectorWorker.postMessage({id,epoch,mode,w:probe.width,h:probe.height,buffer:gray.buffer,target,still:!!photo},[gray.buffer]);
 }
 function findOpening(){
  const gray=captureGray();if(!gray){hint.textContent='יש להפעיל מצלמה תחילה';return;}
@@ -352,11 +353,11 @@ function updateTracking(){
  }else previous=current;
  draw();
 }
-document.getElementById('mark').onclick=()=>{markOpening=true;manualCorners=[];editCorners=false;hideGuides=true;document.getElementById('adjust').classList.remove('active');hint.textContent='סמנו 4 פינות: שמאל למעלה, ימין למעלה, ימין למטה, שמאל למטה';draw()};
+document.getElementById('mark').onclick=()=>{invalidateDetection();markOpening=true;manualCorners=[];editCorners=false;hideGuides=true;document.getElementById('adjust').classList.remove('active');hint.textContent='סמנו 4 פינות: שמאל למעלה, ימין למעלה, ימין למטה, שמאל למטה';draw()};
 document.getElementById('adjust').onclick=()=>{if(!found){hint.textContent='יש לזהות פתח תחילה · לחצו על סימון ידני';return}editCorners=!editCorners;hideGuides=!editCorners;markOpening=false;document.getElementById('adjust').classList.toggle('active',editCorners);if(!editCorners&&stream&&!photo){resetCV();previous=captureGray();tracking=true;lostFrames=0;if(cvReady&&previous)seedCV(previous)}else if(editCorners){tracking=false;resetCV()}hint.textContent=editCorners?'גררו את ארבע הפינות למשקוף ולחצו שוב לסיום':'ההתאמה נשמרה · מעקב פעיל';draw()};
-autoBtn.onclick=()=>{if(photo){found=false;findOpeningPhoto();return}resetCV();tracking=false;found=false;manualLock=false;selectedByTap=false;targetCenter=null;autoSearch=true;autoCandidate=null;autoCandidateCount=0;previous=null;lastSearch=0;editCorners=false;hideGuides=true;markOpening=false;searchFailures=0,manualCorners=[];hint.textContent='מחפשים פתח דלת אוטומטית…';draw()};
+autoBtn.onclick=()=>{invalidateDetection();if(photo){found=false;findOpeningPhoto();return}resetCV();tracking=false;found=false;manualLock=false;selectedByTap=false;targetCenter=null;autoSearch=true;autoCandidate=null;autoCandidateCount=0;previous=null;lastSearch=0;editCorners=false;hideGuides=true;markOpening=false;searchFailures=0,manualCorners=[];hint.textContent='מחפשים פתח דלת אוטומטית…';draw()};
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&stream){resetCV();stream.getTracks().forEach(t=>t.stop());stream=null;video.srcObject=null;hint.textContent='המצלמה נעצרה · הפעילו אותה מחדש'}});const originalCamera=document.getElementById('start').onclick;
-document.getElementById('start').onclick=async()=>{resetCV();await originalCamera();previous=null;tracking=false;found=false;selectedByTap=false;targetCenter=null;autoSearch=true;autoCandidate=null;autoCandidateCount=0;lostFrames=0;lastSearch=0;editCorners=false;hideGuides=true;markOpening=false;if(stream){hint.textContent='מחפשים פתח דלת אוטומטית…'}};
+document.getElementById('start').onclick=async()=>{invalidateDetection();resetCV();await originalCamera();previous=null;tracking=false;found=false;selectedByTap=false;targetCenter=null;autoSearch=true;autoCandidate=null;autoCandidateCount=0;lostFrames=0;lastSearch=0;editCorners=false;hideGuides=true;markOpening=false;if(stream){hint.textContent='מחפשים פתח דלת אוטומטית…'}};
 // Photo import uses its own still-image detection flow; no live tracker is started.
 
 canvas.addEventListener('pointerup',()=>{if(wasDragging){wasDragging=false;return}if(!found||!editCorners)return;manualLock=true;tracking=false;previous=null;lostFrames=0});
