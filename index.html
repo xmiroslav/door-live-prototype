@@ -140,49 +140,55 @@ function seedCV(gray){
 }
 function trackCV(gray){
  if(!cvReady||cvBusy||!tracking||!points)return false;
- cvBusy=true;let current=null,next=null,status=null,errors=null,H=null,src=null,dst=null,inlierMask=null;
+ cvBusy=true;
+ let current=null,next=null,status=null,errors=null,back=null,backStatus=null,backErrors=null,H=null,src=null,dst=null,inlierMask=null;
  try{
   if(!cvLast||!cvFeatures){seedCV(gray);return false}
   current=cvFrame(gray);next=new cv.Mat();status=new cv.Mat();errors=new cv.Mat();
-  cv.calcOpticalFlowPyrLK(cvLast,current,cvFeatures,next,status,errors,new cv.Size(21,21),3,
-   new cv.TermCriteria(cv.TermCriteria_COUNT+cv.TermCriteria_EPS,25,.025));
-  const a=[],b=[];
+  cv.calcOpticalFlowPyrLK(cvLast,current,cvFeatures,next,status,errors,new cv.Size(21,21),3,new cv.TermCriteria(cv.TermCriteria_COUNT+cv.TermCriteria_EPS,30,.02));
+  back=new cv.Mat();backStatus=new cv.Mat();backErrors=new cv.Mat();
+  cv.calcOpticalFlowPyrLK(current,cvLast,next,back,backStatus,backErrors,new cv.Size(21,21),3,new cv.TermCriteria(cv.TermCriteria_COUNT+cv.TermCriteria_EPS,30,.02));
+  const a=[],b=[],kept=[];
   for(let i=0;i<cvFeatures.rows;i++){
-   if(!status.data[i]||errors.data32F[i]>28)continue;
-   a.push(cvFeatures.data32F[2*i],cvFeatures.data32F[2*i+1]);
-   b.push(next.data32F[2*i],next.data32F[2*i+1]);
+   if(!status.data[i]||!backStatus.data[i]||errors.data32F[i]>32)continue;
+   const x=cvFeatures.data32F[2*i],y=cvFeatures.data32F[2*i+1];
+   const xx=next.data32F[2*i],yy=next.data32F[2*i+1];
+   if(Math.hypot(back.data32F[2*i]-x,back.data32F[2*i+1]-y)>1.7)continue;
+   if(xx<4||yy<4||xx>probe.width-4||yy>probe.height-4)continue;
+   a.push(x,y);b.push(xx,yy);kept.push(i);
   }
-  if(a.length<12){lostFrames+=2;resetCV();return false}
-  src=cv.matFromArray(a.length/2,1,cv.CV_32FC2,a);
-  dst=cv.matFromArray(b.length/2,1,cv.CV_32FC2,b);
+  if(kept.length<12){lostFrames++;seedCV(gray);return false}
+  src=cv.matFromArray(kept.length,1,cv.CV_32FC2,a);
+  dst=cv.matFromArray(kept.length,1,cv.CV_32FC2,b);
   inlierMask=new cv.Mat();
-  H=cv.findHomography(src,dst,cv.RANSAC,3,inlierMask,1500,.995);
-  if(H.empty()){lostFrames++;return false}
-  let count=0;for(let i=0;i<inlierMask.rows;i++)count+=inlierMask.data[i]?1:0;
-  if(count<10||count/(a.length/2)<.58){lostFrames++;return false}
-  const d=H.data64F.length?H.data64F:H.data32F;
+  H=cv.findHomography(src,dst,cv.RANSAC,2.5,inlierMask,1000,.99);
+  if(H.empty()){lostFrames++;seedCV(gray);return false}
+  let count=0;for(let i=0;i<kept.length;i++)if(inlierMask.data[i])count++;
+  if(count<10||count/kept.length<.62){lostFrames++;seedCV(gray);return false}
+  const d=H.type()===cv.CV_64FC1?H.data64F:H.data32F;
   const sx=probe.width/canvas.width,sy=probe.height/canvas.height;
   const projected=points.map(q=>{
    const x=q[0]*sx,y=q[1]*sy,z=d[6]*x+d[7]*y+d[8];
    return [(d[0]*x+d[1]*y+d[2])/z/sx,(d[3]*x+d[4]*y+d[5])/z/sy];
   });
-  if(projected.some((q,i)=>!Number.isFinite(q[0])||!Number.isFinite(q[1])||Math.hypot(q[0]-points[i][0],q[1]-points[i][1])>canvas.width*.12)){lostFrames++;return false}
-  // Reject mirrored, collapsed or implausibly warped quadrilaterals.
-  const polygonArea=q=>q.reduce((v,p,i)=>v+p[0]*q[(i+1)%4][1]-q[(i+1)%4][0]*p[1],0)/2;
-  const oldArea=polygonArea(points),newArea=polygonArea(projected);
-  if(oldArea*newArea<=0||Math.abs(newArea/oldArea)<.72||Math.abs(newArea/oldArea)>1.38){lostFrames++;return false}
-  const lengths=projected.map((p,i)=>Math.hypot(p[0]-projected[(i+1)%4][0],p[1]-projected[(i+1)%4][1]));
-  if(Math.min(...lengths)<20*devicePixelRatio){lostFrames++;return false}
-  points=points.map((q,i)=>[q[0]*.22+projected[i][0]*.78,q[1]*.22+projected[i][1]*.78]);
-  lostFrames=0;hint.textContent='מעקב פעיל · בדקו את מיקום הדלת';
-  cvLast.delete();cvFeatures.delete();cvLast=current;current=null;cvFeatures=next;next=null;
-  if(cvFeatures.rows<22)seedCV(gray);
+  const area=q=>q.reduce((v,p,i)=>v+p[0]*q[(i+1)%4][1]-q[(i+1)%4][0]*p[1],0)/2;
+  const oldArea=area(points),newArea=area(projected);
+  if(projected.some((q,i)=>!Number.isFinite(q[0])||!Number.isFinite(q[1])||Math.hypot(q[0]-points[i][0],q[1]-points[i][1])>canvas.width*.22)||
+   oldArea*newArea<=0||Math.abs(newArea/oldArea)<.65||Math.abs(newArea/oldArea)>1.5){
+   lostFrames++;seedCV(gray);return false;
+  }
+  const alpha=count/kept.length>.8?.88:.7;
+  points=points.map((q,i)=>[q[0]*(1-alpha)+projected[i][0]*alpha,q[1]*(1-alpha)+projected[i][1]*alpha]);
+  lostFrames=0;hint.textContent='מעקב פעיל · הדלת עוקבת אחרי תנועת המצלמה';
+  // Keep only geometrically consistent features, not drifting or occluded pixels.
+  const tracked=[];
+  for(let j=0;j<kept.length;j++)if(inlierMask.data[j])tracked.push(b[j*2],b[j*2+1]);
+  cvLast.delete();cvFeatures.delete();cvLast=current;current=null;
+  cvFeatures=cv.matFromArray(tracked.length/2,1,cv.CV_32FC2,tracked);
+  if(cvFeatures.rows<28)seedCV(gray);
   draw();return true;
- }catch(e){console.warn('OpenCV tracking error',e);resetCV();return false}
- finally{
-  for(const m of [current,next,status,errors,H,src,dst,inlierMask])if(m)m.delete();
-  cvBusy=false;
- }
+ }catch(e){console.warn('OpenCV tracking error',e);lostFrames++;try{seedCV(gray)}catch(_){}return false}
+ finally{for(const m of [current,next,status,errors,back,backStatus,backErrors,H,src,dst,inlierMask])if(m)m.delete();cvBusy=false}
 }
 function updateTracking(){
  if(!tracking||photo||!stream||drag>=0)return;
