@@ -105,7 +105,7 @@ document.getElementById('toolsToggle').onclick=()=>{
  tools.hidden=!tools.hidden;button.setAttribute('aria-expanded',String(!tools.hidden));
 };
 
-document.getElementById('start').onclick=async()=>{try{setBusy('מפעילים מצלמה…');if(stream)stream.getTracks().forEach(t=>t.stop());stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:640},height:{ideal:480},frameRate:{ideal:20,max:24}},audio:false});video.srcObject=stream;await video.play();showPreviewUI();photo=null;searchStart=Date.now();autoSearch=true;found=false;resetCV();invalidateDetection();setBusy('סורקים את החדר…');video.style.transform='scale('+zoom+')';video.style.display='block';document.getElementById('hint').textContent='מחפשים פתח דלת אוטומטית…';draw()}catch(e){setBusy(null);alert('המצלמה אינה זמינה. נדרש HTTPS ואישור גישה בדפדפן. '+e.message)}};document.getElementById('choosePhoto').onclick=()=>document.getElementById('gallery').click();
+document.getElementById('start').onclick=async()=>{try{setBusy('מפעילים מצלמה…');if(stream)stream.getTracks().forEach(t=>t.stop());stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:640},height:{ideal:480},frameRate:{ideal:20,max:24}},audio:false});video.srcObject=stream;await video.play();showPreviewUI();photo=null;probe.width=240;probe.height=360;searchStart=Date.now();autoSearch=true;found=false;resetCV();invalidateDetection();setBusy('סורקים את החדר…');video.style.transform='scale('+zoom+')';video.style.display='block';document.getElementById('hint').textContent='מחפשים פתח דלת אוטומטית…';draw()}catch(e){setBusy(null);alert('המצלמה אינה זמינה. נדרש HTTPS ואישור גישה בדפדפן. '+e.message)}};document.getElementById('choosePhoto').onclick=()=>document.getElementById('gallery').click();
 document.getElementById('file').onchange=loadRoomPhoto;
 document.getElementById('gallery').onchange=loadRoomPhoto;
 let busyState='',searchStart=0;
@@ -115,7 +115,7 @@ function loadRoomPhoto(e){
  const f=e.target.files&&e.target.files[0];if(!f)return;
  setBusy('טוענים את התמונה…');hint.textContent='טוענים תמונה…';const url=URL.createObjectURL(f),im=new Image();
  im.onload=()=>{
-  invalidateDetection();showPreviewUI();photo=im;if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}
+  invalidateDetection();showPreviewUI();photo=im;probe.width=360;probe.height=Math.max(360,Math.round(360*canvas.height/canvas.width));if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}
   video.srcObject=null;video.style.display='none';resetCV();tracking=false;found=false;
   autoSearch=false;manualLock=false;markOpening=false;manualCorners=[];editCorners=false;hideGuides=true;
   hint.textContent='מנתחים את צילום החדר…';setBusy('מזהים את מסגרת הדלת…');draw();
@@ -411,9 +411,10 @@ function acceptTrackedQuad(gray,quad){
 }
 function initializeJambReference(gray){jambReference=jambEvidence(gray,points);jambFailures=0}
 function loseTracking(){
- tracking=false;found=false;previous=null;trackingConfidence=0;jambReference=0;jambFailures=0;resetCV();resetWorkerTracking();
- autoSearch=!manualLock;autoCandidate=null;autoCandidateCount=0;lastSearch=0;searchStart=Date.now();if(autoSearch)setBusy('מאתרים מחדש את המשקוף…');
- hint.textContent='המעקב אבד · כוונו שוב לפתח או סמנו ידנית';draw();
+ tracking=false;previous=null;trackingConfidence=0;jambReference=0;jambFailures=0;resetCV();resetWorkerTracking();
+ autoSearch=false;autoCandidate=null;autoCandidateCount=0;lastSearch=0;setBusy(null);
+ editCorners=true;hideGuides=false;document.getElementById('adjust').classList.add('active');
+ hint.textContent='המעקב אבד · הדלת נשארה במקום האחרון · התאימו פינות או בחרו חיפוש מחדש';draw();
 }
 function updateTracking(){
  if(!tracking||photo||!stream||drag>=0||editCorners||markOpening)return;
