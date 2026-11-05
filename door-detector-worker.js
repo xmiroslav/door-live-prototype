@@ -65,7 +65,17 @@ self.onmessage=e=>{
    return [x,y];
   };
   const tl=intersection(left),tr=intersection(right);
-  const bl=[left.x+left.tilt*(b-midY),b],br=[right.x+right.tilt*(b-midY),b];
+  // Floor threshold: look for a coherent horizontal transition near the expected
+  // bottom of the opening. Never shift the door far from the jamb endpoints.
+  let floorY=b,floorStrength=0;
+  for(let yy=Math.max(t+35,b-25);yy<=Math.min(h-5,b+22);yy+=2){
+   const xl=left.x+left.tilt*(yy-midY),xr=right.x+right.tilt*(yy-midY);
+   const strength=hor(yy,xl+8,xr-8);
+   const adjusted=strength-Math.abs(yy-b)*.28;
+   if(adjusted>floorStrength){floorStrength=adjusted;floorY=yy}
+  }
+  if(floorStrength<13)floorY=b;
+  const bl=[left.x+left.tilt*(floorY-midY),floorY],br=[right.x+right.tilt*(floorY-midY),floorY];
   const quad=[tl,tr,br,bl];
   const cross=(a,b,c)=>(b[0]-a[0])*(c[1]-b[1])-(b[1]-a[1])*(c[0]-b[0]);
   if(quad.some(p=>!p.every(Number.isFinite))||quad[1][0]-quad[0][0]<25||quad[2][0]-quad[3][0]<20)return null;
