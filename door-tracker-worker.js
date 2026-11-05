@@ -49,6 +49,42 @@ function affine(a,b,c){
  const X=solve3(rows,[a.X,b.X,c.X]),Y=solve3(rows,[a.Y,b.Y,c.Y]);
  return X&&Y?[...X,...Y]:null;
 }
+// Normalized 4-point DLT with pivoted Gaussian elimination.
+function solve8(rows,values){
+ const a=rows.map((r,i)=>[...r,values[i]]);
+ for(let c=0;c<8;c++){
+  let p=c;for(let j=c+1;j<8;j++)if(Math.abs(a[j][c])>Math.abs(a[p][c]))p=j;
+  if(Math.abs(a[p][c])<1e-8)return null;
+  [a[c],a[p]]=[a[p],a[c]];
+  const d=a[c][c];for(let j=c;j<=8;j++)a[c][j]/=d;
+  for(let k=0;k<8;k++)if(k!==c){const f=a[k][c];for(let j=c;j<=8;j++)a[k][j]-=f*a[c][j]}
+ }
+ return a.map(r=>r[8]);
+}
+function homography(points){
+ const rows=[],vals=[];
+ for(const p of points){
+  rows.push([p.x,p.y,1,0,0,0,-p.x*p.X,-p.y*p.X]);vals.push(p.X);
+  rows.push([0,0,0,p.x,p.y,1,-p.x*p.Y,-p.y*p.Y]);vals.push(p.Y);
+ }
+ const m=solve8(rows,vals);return m&&m.every(Number.isFinite)?[...m,1]:null;
+}
+function project(m,p){
+ const d=m[6]*p[0]+m[7]*p[1]+m[8];
+ return Math.abs(d)>1e-6?[(m[0]*p[0]+m[1]*p[1]+m[2])/d,(m[3]*p[0]+m[4]*p[1]+m[5])/d]:[NaN,NaN];
+}
+function polygonArea(q){let a=0;for(let i=0;i<q.length;i++){const p=q[i],r=q[(i+1)%q.length];a+=p[0]*r[1]-r[0]*p[1]}return Math.abs(a)/2}
+function validProjection(m,q,w,h){
+ const out=q.map(p=>project(m,p));
+ if(out.some(p=>!p.every(Number.is)))return false;
+ const original=polygonArea(q),next=polygonArea(out),ratio=next/Math.max(1,original);
+ if(ratio<.65||ratio>1.5)return false;
+ const shift=Math.max(...q.map((p,i)=>Math.hypot(out[i][0]-p[0],out[i][1]-p[1])));
+ if(shift>Math.max(26,w*.13))return false;
+ const cross=(a,b,c)=>(b[0]-a[0])*(c[1]-b[1])-(b[1]-a[1])*(c[0]-b[0]);
+ const signs=out.map((p,i)=>cross(p,out[(i+1)%4],out[(i+2)%4]));
+ return signs.every(v=>v>0)||signs.every(v=>v<0);
+}
 const apply=(m,p)=>[m[0]*p[0]+m[1]*p[1]+m[2],m[3]*p[0]+m[4]*p[1]+m[5]];
 self.onmessage=e=>{
  const {id,session,buffer,w,h,quad}=e.data,gray=new Uint8Array(buffer);
@@ -97,6 +133,27 @@ self.onmessage=e=>{
  // Require spatial support around the opening: one wall patch must not control the door.
  const xs=bestIn.map(p=>p.x),ys=bestIn.map(p=>p.y);
  if(Math.max(...xs)-Math.min(...xs)<w*.16||Math.max(...ys)-Math.min(...ys)<h*.15){self.postMessage({id,session,ok:false,reason:'clustered'});return}
+ // Four-point projective RANSAC: retain only if it beats affine and remains plausible.
+ let bestH=null,hIn=[];
+ const reference=quad,seed=bestIn.length;
+ if(seed>=12){
+  for(let t=0;t<130;t++){
+   const ids=[t%seed,(t*7+5)%seed,(t*11+17)%seed,(t*19+29)%seed];
+   if(new Set(ids).size!==4)continue;
+   const sample=ids.map(i=>bestIn[i]);
+   const hmat=homography(sample);
+   if(!hmat||!validProjection(hmat,reference,w,h))continue;
+   const inliers=matches.filter(p=>{const v=project(hmat,[p.x,p.y]);return Number.isFinite(v[0])&&Math.hypot(v[0]-p.X,v[1]-p.Y)<2.6});
+   if(inliers.length>hIn.length){bestH=hmat;hIn=inliers}
+  }
+ }
+ // Require projective support to exceed affine consensus, otherwise prefer stable affine.
+ if(bestH&&hIn.length>=12&&hIn.length>=bestIn.length+2&&hIn.length/count>=.65){
+  const proposed=reference.map(p=>project(bestH,p));
+  const error=med(hIn.map(p=>{const v=project(bestH,[p.x,p.y]);return Math.hypot(v[0]-p.X,v[1]-p.Y)}));
+  self.postMessage({id,session,ok:true,model:'homography',proposed,count:hIn.length,confidence:Math.min(1,hIn.length/count)*Math.max(.3,1-error/4),error});
+  return;
+ }
  // Least-squares affine refinement from all RANSAC inliers.
  const n=bestIn.length,sx=bestIn.reduce((v,p)=>v+p.x,0)/n,sy=bestIn.reduce((v,p)=>v+p.y,0)/n;
  let xx=0,xy=0,yy=0,xX=0,yX=0,xY=0,yY=0;
@@ -110,5 +167,5 @@ self.onmessage=e=>{
  const scale=Math.sqrt(Math.abs(a*e2-b*d));
  if(scale<.87||scale>1.14||shift>Math.max(22,w*.12)){self.postMessage({id,session,ok:false,reason:'motion',count:bestIn.length});return}
  const error=med(bestIn.map(p=>{const q=apply(m,[p.x,p.y]);return Math.hypot(q[0]-p.X,q[1]-p.Y)}));
- self.postMessage({id,session,ok:true,proposed,count:bestIn.length,confidence:Math.min(1,bestIn.length/count)*Math.max(.3,1-error/4),error});
+ self.postMessage({id,session,ok:true,model:'affine',proposed,count:bestIn.length,confidence:Math.min(1,bestIn.length/count)*Math.max(.3,1-error/4),error});
 };
