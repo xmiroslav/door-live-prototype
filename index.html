@@ -137,7 +137,7 @@ function detectOpeningAsync(){
  detectorPending=true;const id=++detectorSeq;
  detectorTimeout=setTimeout(()=>{if(detectorPending&&id===detectorSeq){detectorPending=false;detectorWorker?.terminate();detectorWorker=null;hint.textContent='מצב חיפוש חלופי פעיל'}},4500);
  const target=targetCenter?targetCenter.slice():null;
- detectorWorker.postMessage({id,w:probe.width,h:probe.height,buffer:gray.buffer,target},[gray.buffer]);
+ detectorWorker.postMessage({id,w:probe.width,h:probe.height,buffer:gray.buffer,target,still:!!photo},[gray.buffer]);
 }
 function findOpening(){
  const gray=captureGray();if(!gray){hint.textContent='יש להפעיל מצלמה תחילה';return;}
