@@ -61,9 +61,26 @@ window.addEventListener('message',e=>{if(!['https://www.unidoors.co.il','https:/
  };
  im.onerror=()=>{hint.textContent='לא ניתן לטעון את תמונת הדלת'};im.src=e.data.image});const palette=[['אפור כהה','#394650'],['לבן','#e9e5da'],['עץ','#946542'],['שחור','#15191c'],['כחול','#244b75']];function initPoints(){const w=canvas.width,h=canvas.height;points=[[w*.26,h*.14],[w*.74,h*.14],[w*.74,h*.87],[w*.26,h*.87]]}function resize(){const r=stage.getBoundingClientRect(),old=points;const ratio=Math.min(window.devicePixelRatio||1,1.5);canvas.width=Math.round(r.width*ratio);canvas.height=Math.round(r.height*ratio);if(old){const sx=canvas.width/(resize.oldW||canvas.width),sy=canvas.height/(resize.oldH||canvas.height);points=old.map(p=>[p[0]*sx,p[1]*sy])}else initPoints();resize.oldW=canvas.width;resize.oldH=canvas.height;draw()}window.addEventListener('resize',resize);
 function trimDoorImage(image){
- // The configurator supplies the entire door frame. Cropping by alpha
- // can remove the lintel or narrow pale frame edges. Preserve it exactly.
- return image;
+ // Align the actual visible outer frame with the four selected jamb corners.
+ // Ignore only fully transparent capture padding; never threshold pale frame pixels.
+ const w=image.naturalWidth||image.width,h=image.naturalHeight||image.height;
+ if(!w||!h)return image;
+ const source=document.createElement('canvas');source.width=w;source.height=h;
+ const g=source.getContext('2d',{willReadFrequently:true});g.drawImage(image,0,0,w,h);
+ let pixels;try{pixels=g.getImageData(0,0,w,h).data}catch(e){return image}
+ let minX=w,minY=h,maxX=-1,maxY=-1;
+ for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+  if(pixels[(y*w+x)*4+3]>4){minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y)}
+ }
+ if(maxX<minX||maxY<minY)return image;
+ // Only remove substantial transparent gutters; retain a small safety margin.
+ const pad=Math.max(2,Math.round(Math.min(w,h)*.006));
+ minX=Math.max(0,minX-pad);minY=Math.max(0,minY-pad);
+ maxX=Math.min(w-1,maxX+pad);maxY=Math.min(h-1,maxY+pad);
+ if(minX<3&&minY<3&&maxX>=w-4&&maxY>=h-4)return image;
+ const out=document.createElement('canvas');out.width=maxX-minX+1;out.height=maxY-minY+1;
+ out.getContext('2d').drawImage(source,minX,minY,out.width,out.height,0,0,out.width,out.height);
+ return out;
 }
 
 function renderDoor(){if(doorCache)return doorCache;const c=document.createElement('canvas');c.width=420;c.height=840;const x=c.getContext('2d');x.fillStyle=style.color;x.fillRect(0,0,420,840);x.strokeStyle='#0008';x.lineWidth=12;x.strokeRect(9,9,402,822);x.strokeStyle='#ffffff20';x.lineWidth=3;x.strokeRect(29,29,362,782);if(style.window!=='none'){let wx=style.window==='slim'?270:66,wy=style.window==='slim'?65:65,ww=style.window==='slim'?72:288,wh=style.window==='slim'?440:270;x.fillStyle='#7c9ba9';x.fillRect(wx,wy,ww,wh);x.strokeStyle='#12181f';x.lineWidth=16;x.strokeRect(wx,wy,ww,wh);x.strokeStyle='#c7e7ff66';x.lineWidth=6;x.beginPath();x.moveTo(wx+15,wy+wh-20);x.lineTo(wx+ww-18,wy+20);x.stroke()}x.fillStyle=style.handle==='black'?'#111':style.handle==='gold'?'#c3a15a':'#c9d1d6';x.fillRect(315,440,12,98);x.fillRect(270,443,57,12);return doorCache=c}
