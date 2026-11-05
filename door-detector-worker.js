@@ -1,7 +1,8 @@
 'use strict';
-let last=null,streak=0;
+let last=null,streak=0,lastEpoch=null;
 self.onmessage=e=>{
  const {id,epoch,mode,buffer,w,h,target,still}=e.data;
+ if(epoch!==lastEpoch){last=null;streak=0;lastEpoch=epoch}
  const gray=new Uint8Array(buffer),W=w+1,iv=new Float32Array(W*(h+1)),ih=new Float32Array(W*(h+1));
  for(let y=1;y<=h;y++)for(let x=1;x<=w;x++){
   const xx=x-1,yy=y-1,i=yy*w+xx,k=y*W+x;
