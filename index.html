@@ -133,7 +133,10 @@ function plausibleDoorAnchor(p){
  if(!photo&&(bottom<canvas.height*.55||top>canvas.height*.63))return false;
  if(photo){const sw=photo.naturalWidth,sh=photo.naturalHeight,scale=Math.min(canvas.width/sw,canvas.height/sh),left=(canvas.width-sw*scale)/2,right=left+sw*scale,topBound=(canvas.height-sh*scale)/2,bottomBound=topBound+sh*scale;
   if(p.some(q=>q[0]<left-4||q[0]>right+4||q[1]<topBound-4||q[1]>bottomBound+4))return false;
-  if(bottom<topBound+(bottomBound-topBound)*.46)return false;
+  // A door including its frame must occupy a substantial vertical span.
+  // Reject attractive but incomplete rectangles inside the actual opening.
+  const imageHeight=bottomBound-topBound;
+  if(height<imageHeight*.56||bottom<topBound+imageHeight*.70)return false;
  }
  return true;
 }
@@ -246,7 +249,7 @@ try{
   if(!result.quad){if(photo){setBusy(null);found=false;markOpening=true;manualCorners=[];editCorners=false;hint.textContent='המסגרת אינה ברורה · סמנו ארבע פינות ידנית';draw()}else{hint.textContent='מחפשים קווי משקוף ברורים…'}return}
   const [l,t,r,b]=result.best,sx=canvas.width/probe.width,sy=canvas.height/probe.height;
   const candidate=result.quad.map(p=>[p[0]*sx,p[1]*sy]);
-  if(!validDoorQuad(candidate)||!plausibleDoorAnchor(candidate)||(photo&&window.DoorGeometry&&!DoorGeometry.assess(candidate,{width:canvas.width,height:canvas.height}).ok)){if(photo)setBusy(null);else liveSearchStatus();if(photo){markOpening=true;manualCorners=[];hint.textContent='סמנו את ארבע פינות הפתח';draw()}return}
+  if(!validDoorQuad(candidate)||!plausibleDoorAnchor(candidate)||(photo&&window.DoorGeometry&&!DoorGeometry.assess(candidate,{width:canvas.width,height:canvas.height}).ok)){if(photo)setBusy(null);else liveSearchStatus();if(photo){markOpening=true;manualCorners=[];editCorners=false;hideGuides=true;hint.textContent='לא אומתה מסגרת מלאה · סמנו ארבע פינות חיצוניות של המשקוף עד הרצפה';draw()}return}
   setBusy(null);points=photo?candidate:refinePhotoJambQuad(candidate);found=true;autoSearch=false;manualLock=false;tracking=!!stream&&!photo;
   previous=tracking?captureGray():null;lostFrames=0;if(tracking&&previous)initializeJambReference(previous);
   if(tracking&&cvReady&&previous)seedCV(previous);
