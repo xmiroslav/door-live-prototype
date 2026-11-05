@@ -3,6 +3,86 @@ let last=null,streak=0,lastEpoch=null;
 self.onmessage=e=>{
  const {id,epoch,mode,buffer,w,h,target,still}=e.data;
  if(epoch!==lastEpoch){last=null;streak=0;lastEpoch=epoch}
+ // Dedicated still-photo detector: line segments, not brute-force rectangles.
+ // Work in the original letterboxed image coordinates, with no crop.
+ if(mode==='photo'){
+  const gray=new Uint8Array(buffer),vx=new Uint8Array(w*h),hy=new Uint8Array(w*h);
+  let minX=w,maxX=0,minY=h,maxY=0;
+  for(let y=4;y<h-4;y++)for(let x=4;x<w-4;x++){
+   const i=y*w+x;
+   const a=Math.abs(gray[i+2]-gray[i-2]),b=Math.abs(gray[i+2*w]-gray[i-2*w]);
+   vx[i]=Math.min(255,a);hy[i]=Math.min(255,b);
+   // Letterbox pixels are neutral gray, unlike room content.
+   if(gray[i]!==127){minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y)}
+  }
+  const inside=(x,y)=>x>=minX+3&&x<=maxX-3&&y>=minY+3&&y<=maxY-3;
+  const vertical=(x,top,bottom,slope)=>{
+   let total=0,valid=0;
+   for(let j=0;j<24;j++){
+    const y=top+(bottom-top)*(j+.5)/24,px=Math.round(x+slope*(y-(top+bottom)/2)),py=Math.round(y);
+    if(!inside(px,py))return null;
+    const g=Math.max(vx[py*w+px],vx[py*w+px-1],vx[py*w+px+1]);
+    total+=Math.min(130,g);if(g>18)valid++;
+   }
+   return valid>=15?total/24*(valid/24):null;
+  };
+  const horizontal=(y,x0,x1,tilt)=>{
+   let total=0,valid=0;
+   for(let j=0;j<20;j++){
+    const x=x0+(x1-x0)*(j+.5)/20,py=Math.round(y+tilt*(x-(x0+x1)/2)),px=Math.round(x);
+    if(!inside(px,py))return null;
+    const g=Math.max(hy[py*w+px],hy[(py-1)*w+px],hy[(py+1)*w+px]);
+    total+=Math.min(130,g);if(g>17)valid++;
+   }
+   return valid>=11?total/20*(valid/20):null;
+  };
+  const spanX=maxX-minX,spanY=maxY-minY;
+  // Doorframe is typically taller than wide, but oblique perspective is allowed.
+  const candidates=[];
+  const stride=Math.max(3,Math.round(w/90));
+  for(let top=minY+5;top<minY+spanY*.54;top+=stride*2){
+   for(let height=Math.round(spanY*.30);height<=spanY*.91;height+=stride*3){
+    const bottom=top+height;if(bottom>maxY-3)continue;
+    const sides=[];
+    for(let x=minX+6;x<maxX-6;x+=stride){
+     for(const slope of [-.30,-.20,-.10,0,.10,.20,.30]){
+      const strength=vertical(x,top,bottom,slope);
+      if(strength!==null&&strength>15)sides.push({x,slope,strength});
+     }
+    }
+    sides.sort((a,b)=>b.strength-a.strength);
+    const strongest=sides.slice(0,24);
+    for(let a=0;a<strongest.length;a++)for(let b=0;b<strongest.length;b++){
+     const L=strongest[a],R=strongest[b],width=R.x-L.x;
+     if(width<spanX*.08||width>Math.min(spanX*.65,height*.86)||height/width<1.3||height/width>4.8)continue;
+     const topLeft=L.x-L.slope*height/2,topRight=R.x-R.slope*height/2;
+     const bottomLeft=L.x+L.slope*height/2,bottomRight=R.x+R.slope*height/2;
+     if(topRight-topLeft<width*.55||bottomRight-bottomLeft<width*.55)continue;
+     let bestTop=null;
+     for(const tilt of [-.20,-.10,0,.10,.20]){
+      const score=horizontal(top,topLeft+3,topRight-3,tilt);
+      if(score!==null&&(!bestTop||score>bestTop.score))bestTop={tilt,score};
+     }
+     if(!bestTop||bestTop.score<13)continue;
+     let floor=horizontal(bottom,bottomLeft+4,bottomRight-4,0)||0;
+     const q=[[topLeft,top-bestTop.tilt*(topRight-topLeft)/2],[topRight,top+bestTop.tilt*(topRight-topLeft)/2],[bottomRight,bottom],[bottomLeft,bottom]];
+     if(q.some(p=>!inside(Math.round(p[0]),Math.round(p[1]))))continue;
+     const center=(L.x+R.x)/2;
+     const score=Math.min(L.strength,R.strength)*2+bestTop.score*1.6+Math.min(floor,55)*.3
+       +Math.min(height/spanY,.75)*15-Math.abs(center-(minX+maxX)/2)/spanX*12;
+     if(candidates.length<8||score>candidates[candidates.length-1].score){
+      candidates.push({score,quad:q,quality:Math.min(L.strength,R.strength,bestTop.score),rect:[Math.min(topLeft,bottomLeft),top,Math.max(topRight,bottomRight),bottom]});
+      candidates.sort((a,b)=>b.score-a.score);if(candidates.length>8)candidates.pop();
+     }
+    }
+   }
+  }
+  const winner=candidates[0];
+  // No automatic overlay without multiple coherent, contrasted frame edges.
+  if(!winner||winner.quality<15){self.postMessage({id,epoch,mode,best:null,quality:0});return}
+  self.postMessage({id,epoch,mode,best:winner.rect,quad:winner.quad,quality:winner.quality,stable:true,method:'photo-lines'});
+  return;
+ }
  const gray=new Uint8Array(buffer),W=w+1,iv=new Float32Array(W*(h+1)),ih=new Float32Array(W*(h+1));
  for(let y=1;y<=h;y++)for(let x=1;x<=w;x++){
   const xx=x-1,yy=y-1,i=yy*w+xx,k=y*W+x;
