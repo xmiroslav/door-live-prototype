@@ -70,7 +70,7 @@ function findOpeningPhoto(){
  autoCandidate=null;autoCandidateCount=0;
  for(let i=0;i<3&&!found;i++)findOpening();
  if(found){
-  tracking=false;editCorners=true;hideGuides=false;
+  tracking=false;previous=null;resetCV();editCorners=true;hideGuides=false;
   document.getElementById('adjust').classList.add('active');
   hint.textContent='זוהה פתח אפשרי · התאימו את ארבע הפינות ולחצו על התאמת פינות';
  }else{
@@ -150,8 +150,8 @@ function findOpening(){
  // Do not present a global rectangular guess as a confirmed physical anchor.
  // Automatic mode uses repeated-frame confirmation.
  const edgeL=v(l,t,b),edgeR=v(r,t,b),edgeT=hh(t,l,r);
- if(Math.min(edgeL,edgeR,edgeT)<(targetCenter?9:13)){found=false;tracking=false;searchFailures++;hint.textContent=searchFailures>1?'לא זוהה פתח · לחצו על סימון ידני וסמנו 4 פינות':'מחפשים פתח דלת…';draw();return;}
- if(!targetCenter){if(!autoCandidate||Math.hypot(l-autoCandidate[0],t-autoCandidate[1],r-autoCandidate[2],b-autoCandidate[3])>16){autoCandidate=best;autoCandidateCount=1;hint.textContent='זוהה פתח אפשרי · מאמתים… · אפשר גם לסמן ידנית';return;}if(++autoCandidateCount<3)return;autoSearch=false;}
+ if(Math.min(edgeL,edgeR,edgeT)<(targetCenter?9:17)){found=false;tracking=false;searchFailures++;hint.textContent=searchFailures>1?'לא זוהה פתח · לחצו על סימון ידני וסמנו 4 פינות':'מחפשים פתח דלת…';draw();return;}
+ if(!targetCenter){if(!autoCandidate||Math.hypot(l-autoCandidate[0],t-autoCandidate[1],r-autoCandidate[2],b-autoCandidate[3])>16){autoCandidate=best;autoCandidateCount=1;hint.textContent='זוהה פתח אפשרי · מאמתים… · אפשר גם לסמן ידנית';return;}if(++autoCandidateCount<4)return;autoSearch=false;}
  points=[[l*sx,t*sy],[r*sx,t*sy],[r*sx,b*sy],[l*sx,b*sy]];
  found=true;manualLock=selectedByTap;previous=captureGray();tracking=true;lostFrames=0;searchFailures=0,manualCorners=[];editCorners=false;hideGuides=true;if(cvReady)seedCV(previous);
  hint.textContent='הדלת מוצגת · לתיקון המיקום לחצו על התאמת פינות';
@@ -177,7 +177,7 @@ cvScript.onerror=()=>{console.warn('OpenCV.js unavailable; using fallback tracke
 // Full OpenCV WASM is intentionally opt-in: automatic loading stalls some iOS browsers.
 document.head.appendChild(cvScript);
 function resetCV(){if(cvLast)cvLast.delete();if(cvCorners)cvCorners.delete();if(cvFeatures)cvFeatures.delete();cvLast=cvCorners=cvFeatures=null}
-function cvFrame(gray){return cv.matFromArray(probe.height,probe.width,cv.CV_8UC1,Array.from(gray))}
+function cvFrame(gray){const m=new cv.Mat(probe.height,probe.width,cv.CV_8UC1);m.data.set(gray);return m}
 function seedCV(gray){
  if(!cvReady||!points)return false;
  resetCV();const frame=cvFrame(gray),mask=cv.Mat.zeros(probe.height,probe.width,cv.CV_8UC1);
@@ -192,7 +192,7 @@ function seedCV(gray){
   }
  }
  const corners=new cv.Mat();
- cv.goodFeaturesToTrack(frame,corners,180,.008,5,mask,5,false,.04);
+ cv.goodFeaturesToTrack(frame,corners,160,.01,6,mask,7,false,.04);
  mask.delete();
  if(corners.rows<12){corners.delete();frame.delete();return false}
  cvLast=frame;cvFeatures=corners;return true;
@@ -216,14 +216,14 @@ function trackCV(gray){
    if(xx<4||yy<4||xx>probe.width-4||yy>probe.height-4)continue;
    a.push(x,y);b.push(xx,yy);kept.push(i);
   }
-  if(kept.length<12){lostFrames++;seedCV(gray);return false}
+  if(kept.length<12){lostFrames++;return false}
   src=cv.matFromArray(kept.length,1,cv.CV_32FC2,a);
   dst=cv.matFromArray(kept.length,1,cv.CV_32FC2,b);
   inlierMask=new cv.Mat();
   H=cv.findHomography(src,dst,cv.RANSAC,2.5,inlierMask,1000,.99);
-  if(H.empty()){lostFrames++;seedCV(gray);return false}
+  if(H.empty()){lostFrames++;return false}
   let count=0;for(let i=0;i<kept.length;i++)if(inlierMask.data[i])count++;
-  if(count<10||count/kept.length<.62){lostFrames++;seedCV(gray);return false}
+  if(count<10||count/kept.length<.62){lostFrames++;return false}
   const d=H.type()===cv.CV_64FC1?H.data64F:H.data32F;
   const sx=probe.width/canvas.width,sy=probe.height/canvas.height;
   const projected=points.map(q=>{
@@ -234,7 +234,7 @@ function trackCV(gray){
   const oldArea=area(points),newArea=area(projected);
   if(!validDoorQuad(projected)||projected.some((q,i)=>!Number.isFinite(q[0])||!Number.isFinite(q[1])||Math.hypot(q[0]-points[i][0],q[1]-points[i][1])>canvas.width*.22)||
    oldArea*newArea<=0||Math.abs(newArea/oldArea)<.65||Math.abs(newArea/oldArea)>1.5){
-   lostFrames++;seedCV(gray);return false;
+   lostFrames++;return false;
   }
   const alpha=count/kept.length>.8?.88:.7;
   points=points.map((q,i)=>[q[0]*(1-alpha)+projected[i][0]*alpha,q[1]*(1-alpha)+projected[i][1]*alpha]);
@@ -246,13 +246,13 @@ function trackCV(gray){
   cvFeatures=cv.matFromArray(tracked.length/2,1,cv.CV_32FC2,tracked);
   if(cvFeatures.rows<28)seedCV(gray);
   draw();return true;
- }catch(e){console.warn('OpenCV tracking error',e);lostFrames++;try{seedCV(gray)}catch(_){}return false}
+ }catch(e){console.warn('OpenCV tracking error',e);lostFrames++;return false}
  finally{for(const m of [current,next,status,errors,back,backStatus,backErrors,H,src,dst,inlierMask])if(m)m.delete();cvBusy=false}
 }
 function updateTracking(){
  if(!tracking||photo||!stream||drag>=0||editCorners)return;
  const current=captureGray();if(!current)return;
- if(cvReady){if(trackCV(current)){previous=current;return}if(lostFrames>=8){tracking=false;found=false;resetCV();autoSearch=!manualLock;autoCandidate=null;autoCandidateCount=0;lastSearch=0;hint.textContent='המעקב אבד · לחצו על סימון ידני כדי לחדש';draw();return}previous=current;return}
+ if(cvReady){if(trackCV(current)){previous=current;return}if(lostFrames>=6){tracking=false;found=false;resetCV();autoSearch=!manualLock;autoCandidate=null;autoCandidateCount=0;lastSearch=0;hint.textContent='המעקב אבד · כוונו שוב לפתח או סמנו ידנית';draw();return}previous=current;return}
  if(!previous){previous=current;return}
  const w=probe.width,h=probe.height,sx=canvas.width/w,sy=canvas.height/h;
  const p=points.map(q=>[q[0]/sx,q[1]/sy]);
