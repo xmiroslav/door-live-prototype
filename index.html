@@ -1,4 +1,4 @@
-<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Door Live — prototype</title><style>*{box-sizing:border-box}html,body{height:100%;overflow:hidden}body{margin:0;background:#101318;color:white;font:15px system-ui,sans-serif}main{height:100%;height:100dvh;min-height:0;display:flex;flex-direction:column;position:relative;overflow:hidden}header{height:54px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 16px;background:#171d25}header b{letter-spacing:.05em}.tag{font-size:11px;color:#9bd5ff}.stage{position:relative;flex:1;min-height:0;overflow:hidden;background:linear-gradient(130deg,#303842,#14181e)}video,canvas{position:absolute;width:100%;height:100%;object-fit:cover}canvas{touch-action:none}.hint{position:absolute;top:12px;left:12px;right:12px;text-align:center;pointer-events:none;font-size:12px;background:#101820b8;padding:8px;border-radius:9px}.side{position:absolute;z-index:5;right:12px;top:50%;transform:translateY(-50%);display:grid;gap:9px}.side button,.bottom button,.panel button{border:0;color:white;background:#273545;border-radius:13px;padding:12px;cursor:pointer}.side button{width:48px;height:48px;font-size:22px}.side button.active{background:#177fa7}.bottom{position:absolute;bottom:0;left:0;right:0;z-index:10;display:flex;justify-content:space-around;padding:12px 12px calc(12px + env(safe-area-inset-bottom, 0px));background:#171d25ee;gap:8px}.bottom button{flex:1}.panel{display:none;position:absolute;z-index:11;bottom:76px;left:10px;right:10px;background:#202833f5;padding:12px 16px 18px;max-height:min(52%,360px);overflow:auto;border:1px solid #526273;border-radius:16px;box-shadow:0 12px 35px #0008}.panel.open{display:block}.options{display:flex;gap:9px;flex-wrap:wrap;margin:8px 0 14px}.options button{border:1px solid #4d5c69;font-size:13px}.options button.selected{border:2px solid #76d5fa;background:#31526a}h4{margin:8px 0}small{color:#b8c5d1}input[type=file]{display:none}@media(max-height:600px){.hint{font-size:11px}.side{top:42%}.side button{width:44px;height:44px}.panel{max-height:48%}} </style></head><body><main><header><b>DOOR <span style="color:#62d4ff">LIVE</span></b><span class="tag">V1.2 · FRAME FEATURES</span></header><div class="stage" id="stage"><video id="video" autoplay muted playsinline></video><canvas id="canvas"></canvas><div class="hint" id="hint">Наведи камеру на дверь. Если положение неверное — коснись центра настоящего проёма.</div><div class="side"><button id="auto" title="Повторно найти дверной проём" aria-label="Повторно найти проём">◎</button></div></div><section class="panel" id="panel"><h4>Цвет двери</h4><div class="options" id="colors"></div><h4>Ручка</h4><div class="options" id="handles"></div><h4>Окно</h4><div class="options" id="windows"></div><small>Все изменения видны сразу. Размеры и цены пока не рассчитываются.</small></section><div class="bottom"><button id="start">📷 Камера</button><button id="save">📸 Сфотографировать</button><button id="upload" style="display:none">Фото</button><input type="file" id="file" accept="image/*"></div></main><script>
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Door Live — prototype</title><style>*{box-sizing:border-box}html,body{height:100%;overflow:hidden}body{margin:0;background:#101318;color:white;font:15px system-ui,sans-serif}main{height:100%;height:100dvh;min-height:0;display:flex;flex-direction:column;position:relative;overflow:hidden}header{height:54px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 16px;background:#171d25}header b{letter-spacing:.05em}.tag{font-size:11px;color:#9bd5ff}.stage{position:relative;flex:1;min-height:0;overflow:hidden;background:linear-gradient(130deg,#303842,#14181e)}video,canvas{position:absolute;width:100%;height:100%;object-fit:cover}canvas{touch-action:none}.hint{position:absolute;top:12px;left:12px;right:12px;text-align:center;pointer-events:none;font-size:12px;background:#101820b8;padding:8px;border-radius:9px}.side{position:absolute;z-index:5;right:12px;top:50%;transform:translateY(-50%);display:grid;gap:9px}.side button,.bottom button,.panel button{border:0;color:white;background:#273545;border-radius:13px;padding:12px;cursor:pointer}.side button{width:48px;height:48px;font-size:22px}.side button.active{background:#177fa7}.bottom{position:absolute;bottom:0;left:0;right:0;z-index:10;display:flex;justify-content:space-around;padding:12px 12px calc(12px + env(safe-area-inset-bottom, 0px));background:#171d25ee;gap:8px}.bottom button{flex:1}.panel{display:none;position:absolute;z-index:11;bottom:76px;left:10px;right:10px;background:#202833f5;padding:12px 16px 18px;max-height:min(52%,360px);overflow:auto;border:1px solid #526273;border-radius:16px;box-shadow:0 12px 35px #0008}.panel.open{display:block}.options{display:flex;gap:9px;flex-wrap:wrap;margin:8px 0 14px}.options button{border:1px solid #4d5c69;font-size:13px}.options button.selected{border:2px solid #76d5fa;background:#31526a}h4{margin:8px 0}small{color:#b8c5d1}input[type=file]{display:none}@media(max-height:600px){.hint{font-size:11px}.side{top:42%}.side button{width:44px;height:44px}.panel{max-height:48%}} </style></head><body><main><header><b>DOOR <span style="color:#62d4ff">LIVE</span></b><span class="tag">V1.3 · OPTICAL FLOW</span></header><div class="stage" id="stage"><video id="video" autoplay muted playsinline></video><canvas id="canvas"></canvas><div class="hint" id="hint">Наведи камеру на дверь. Если положение неверное — коснись центра настоящего проёма.</div><div class="side"><button id="auto" title="Повторно найти дверной проём" aria-label="Повторно найти проём">◎</button></div></div><section class="panel" id="panel"><h4>Цвет двери</h4><div class="options" id="colors"></div><h4>Ручка</h4><div class="options" id="handles"></div><h4>Окно</h4><div class="options" id="windows"></div><small>Все изменения видны сразу. Размеры и цены пока не рассчитываются.</small></section><div class="bottom"><button id="start">📷 Камера</button><button id="save">📸 Сфотографировать</button><button id="upload" style="display:none">Фото</button><input type="file" id="file" accept="image/*"></div></main><script>
 const stage=document.getElementById('stage'),canvas=document.getElementById('canvas'),ctx=canvas.getContext('2d'),video=document.getElementById('video'),panel=document.getElementById('panel');let stream=null,photo=null,points=null,drag=-1,doorCache=null,selectedDoor=null,hideGuides=false,style={color:'#394650',handle:'silver',window:'top'};const doorURL=new URLSearchParams(location.search).get('door');if(doorURL){try{const u=new URL(doorURL,location.href);if(u.protocol==='https:'||u.origin===location.origin){const im=new Image();im.crossOrigin='anonymous';im.onload=()=>{selectedDoor=im;draw()};im.onerror=()=>{document.getElementById('hint').textContent='Не удалось загрузить выбранную дверь. Проверь URL изображения и CORS.'};im.src=u.href}}catch(e){}}window.addEventListener('message',e=>{if(e.origin!=='https://www.unidoors.co.il'&&e.origin!=='https://unidoors.co.il')return;if(e.data?.type!=='unidoors-door-image'||typeof e.data.image!=='string'||!e.data.image.startsWith('data:image/png;base64,'))return;const im=new Image();im.onload=()=>{selectedDoor=im;doorCache=null;hint.textContent='Дверь Unidoors загружена. Включи камеру и нажми ◎ для поиска проёма.';draw()};im.onerror=()=>{hint.textContent='Не удалось открыть изображение двери.'};im.src=e.data.image});const palette=[['Графит','#394650'],['Белый','#e9e5da'],['Дерево','#946542'],['Чёрный','#15191c'],['Синий','#244b75']];function initPoints(){const w=canvas.width,h=canvas.height;points=[[w*.26,h*.14],[w*.74,h*.14],[w*.74,h*.87],[w*.26,h*.87]]}function resize(){const r=stage.getBoundingClientRect(),old=points;canvas.width=Math.round(r.width*devicePixelRatio);canvas.height=Math.round(r.height*devicePixelRatio);if(old){const sx=canvas.width/(resize.oldW||canvas.width),sy=canvas.height/(resize.oldH||canvas.height);points=old.map(p=>[p[0]*sx,p[1]*sy])}else initPoints();resize.oldW=canvas.width;resize.oldH=canvas.height;draw()}window.addEventListener('resize',resize);
 function renderDoor(){if(doorCache)return doorCache;const c=document.createElement('canvas');c.width=420;c.height=840;const x=c.getContext('2d');x.fillStyle=style.color;x.fillRect(0,0,420,840);x.strokeStyle='#0008';x.lineWidth=12;x.strokeRect(9,9,402,822);x.strokeStyle='#ffffff20';x.lineWidth=3;x.strokeRect(29,29,362,782);if(style.window!=='none'){let wx=style.window==='slim'?270:66,wy=style.window==='slim'?65:65,ww=style.window==='slim'?72:288,wh=style.window==='slim'?440:270;x.fillStyle='#7c9ba9';x.fillRect(wx,wy,ww,wh);x.strokeStyle='#12181f';x.lineWidth=16;x.strokeRect(wx,wy,ww,wh);x.strokeStyle='#c7e7ff66';x.lineWidth=6;x.beginPath();x.moveTo(wx+15,wy+wh-20);x.lineTo(wx+ww-18,wy+20);x.stroke()}x.fillStyle=style.handle==='black'?'#111':style.handle==='gold'?'#c3a15a':'#c9d1d6';x.fillRect(315,440,12,98);x.fillRect(270,443,57,12);return doorCache=c}
 function triMap(img,src,dst){const [a,b,c]=src,[d,e,f]=dst;const det=(a[0]*(b[1]-c[1])+b[0]*(c[1]-a[1])+c[0]*(a[1]-b[1]));if(Math.abs(det)<.01)return;const solve=(v)=>[(v[0]*(b[1]-c[1])+v[1]*(c[1]-a[1])+v[2]*(a[1]-b[1]))/det,(v[0]*(c[0]-b[0])+v[1]*(a[0]-c[0])+v[2]*(b[0]-a[0]))/det,(v[0]*(b[0]*c[1]-c[0]*b[1])+v[1]*(c[0]*a[1]-a[0]*c[1])+v[2]*(a[0]*b[1]-b[0]*a[1]))/det];const xx=solve([d[0],e[0],f[0]]),yy=solve([d[1],e[1],f[1]]);ctx.save();ctx.beginPath();ctx.moveTo(...d);ctx.lineTo(...e);ctx.lineTo(...f);ctx.closePath();ctx.clip();ctx.setTransform(xx[0],yy[0],xx[1],yy[1],xx[2],yy[2]);ctx.drawImage(img,0,0);ctx.restore()}
@@ -70,7 +70,7 @@ function findOpening(){
  if(!best){hint.textContent='Не удалось определить проём. Поправь углы вручную.';return;}
  const [l,t,r,b]=best,sx=canvas.width/w,sy=canvas.height/h;
  points=[[l*sx,t*sy],[r*sx,t*sy],[r*sx,b*sy],[l*sx,b*sy]];
- found=true;manualLock=false;previous=captureGray();tracking=true;lostFrames=0;
+ found=true;manualLock=false;previous=captureGray();tracking=true;lostFrames=0;if(cvReady)seedCV(previous);
  hint.textContent='Проём выбран. Если дверь не на месте, коснись центра настоящего проёма.';
  draw();
 }
@@ -83,9 +83,80 @@ function patchScore(a,b,x,y,dx,dy){
  }
  return score/count;
 }
+// Optional OpenCV.js tracker: tracks actual features with pyramidal Lucas-Kanade
+// and estimates a perspective homography using RANSAC. Falls back to the
+// lightweight tracker when OpenCV is unavailable.
+let cvReady=false,cvLast=null,cvCorners=null,cvFeatures=null,cvBusy=false;
+const cvScript=document.createElement('script');
+cvScript.async=true;cvScript.src='https://docs.opencv.org/4.x/opencv.js';
+cvScript.onload=()=>{const wait=()=>{if(window.cv&&cv.Mat&&cv.calcOpticalFlowPyrLK&&cv.findHomography){cvReady=true;hint.textContent='Улучшенное отслеживание готово'}else setTimeout(wait,300)};wait()};
+cvScript.onerror=()=>{console.warn('OpenCV.js unavailable; using fallback tracker')};
+document.head.appendChild(cvScript);
+function resetCV(){if(cvLast)cvLast.delete();if(cvCorners)cvCorners.delete();if(cvFeatures)cvFeatures.delete();cvLast=cvCorners=cvFeatures=null}
+function cvFrame(gray){return cv.matFromArray(probe.height,probe.width,cv.CV_8UC1,Array.from(gray))}
+function seedCV(gray){
+ if(!cvReady||!points)return false;
+ resetCV();const frame=cvFrame(gray),mask=new cv.Mat.zeros(probe.height,probe.width,cv.CV_8UC1);
+ const sx=probe.width/canvas.width,sy=probe.height/canvas.height;
+ const p=points.map(q=>[q[0]*sx,q[1]*sy]);
+ // Seed features along both jambs and the lintel, including nearby texture.
+ for(let i=0;i<4;i++){
+  const a=p[i],b=p[(i+1)%4];
+  for(let j=0;j<=24;j++){
+   const t=j/24,x=a[0]+(b[0]-a[0])*t,y=a[1]+(b[1]-a[1])*t;
+   cv.circle(mask,new cv.Point(Math.round(x),Math.round(y)),13,new cv.Scalar(255),-1);
+  }
+ }
+ const corners=new cv.Mat();
+ cv.goodFeaturesToTrack(frame,corners,110,.012,5,mask,5,false,.04);
+ mask.delete();
+ if(corners.rows<9){corners.delete();frame.delete();return false}
+ cvLast=frame;cvFeatures=corners;return true;
+}
+function trackCV(gray){
+ if(!cvReady||cvBusy||!tracking||!points)return false;
+ cvBusy=true;let current=null,next=null,status=null,errors=null,H=null,src=null,dst=null,inlierMask=null;
+ try{
+  if(!cvLast||!cvFeatures){seedCV(gray);return false}
+  current=cvFrame(gray);next=new cv.Mat();status=new cv.Mat();errors=new cv.Mat();
+  cv.calcOpticalFlowPyrLK(cvLast,current,cvFeatures,next,status,errors,new cv.Size(21,21),3,
+   new cv.TermCriteria(cv.TermCriteria_COUNT+cv.TermCriteria_EPS,25,.025));
+  const a=[],b=[];
+  for(let i=0;i<cvFeatures.rows;i++){
+   if(!status.data[i]||errors.data32F[i]>28)continue;
+   a.push(cvFeatures.data32F[2*i],cvFeatures.data32F[2*i+1]);
+   b.push(next.data32F[2*i],next.data32F[2*i+1]);
+  }
+  if(a.length<9){lostFrames+=2;resetCV();return false}
+  src=cv.matFromArray(a.length/2,1,cv.CV_32FC2,a);
+  dst=cv.matFromArray(b.length/2,1,cv.CV_32FC2,b);
+  inlierMask=new cv.Mat();
+  H=cv.findHomography(src,dst,cv.RANSAC,3,inlierMask,1500,.995);
+  if(H.empty()){lostFrames++;return false}
+  let count=0;for(let i=0;i<inlierMask.rows;i++)count+=inlierMask.data[i]?1:0;
+  if(count<8||count/a.length*2<.55){lostFrames++;return false}
+  const d=H.data64F.length?H.data64F:H.data32F;
+  const sx=probe.width/canvas.width,sy=probe.height/canvas.height;
+  const projected=points.map(q=>{
+   const x=q[0]*sx,y=q[1]*sy,z=d[6]*x+d[7]*y+d[8];
+   return [(d[0]*x+d[1]*y+d[2])/z/sx,(d[3]*x+d[4]*y+d[5])/z/sy];
+  });
+  if(projected.some((q,i)=>!Number.isFinite(q[0])||!Number.isFinite(q[1])||Math.hypot(q[0]-points[i][0],q[1]-points[i][1])>canvas.width*.12)){lostFrames++;return false}
+  points=points.map((q,i)=>[q[0]*.22+projected[i][0]*.78,q[1]*.22+projected[i][1]*.78]);
+  lostFrames=0;hint.textContent='Проём отслеживается · 📸 Сфотографировать';
+  cvLast.delete();cvFeatures.delete();cvLast=current;current=null;cvFeatures=next;next=null;
+  if(cvFeatures.rows<18)seedCV(gray);
+  draw();return true;
+ }catch(e){console.warn('OpenCV tracking error',e);resetCV();return false}
+ finally{
+  for(const m of [current,next,status,errors,H,src,dst,inlierMask])if(m)m.delete();
+  cvBusy=false;
+ }
+}
 function updateTracking(){
  if(!tracking||photo||!stream||drag>=0)return;
  const current=captureGray();if(!current)return;
+ if(cvReady){if(trackCV(current)){previous=current;return}if(!cvLast&&lostFrames<5){previous=current;return}}
  if(!previous){previous=current;return}
  const w=probe.width,h=probe.height,sx=canvas.width/w,sy=canvas.height/h;
  const p=points.map(q=>[q[0]/sx,q[1]/sy]);
@@ -153,13 +224,13 @@ function updateTracking(){
  }else previous=current;
  draw();
 }
-autoBtn.onclick=()=>{tracking=false;manualLock=false;targetCenter=null;previous=null;lastSearch=Date.now();findOpening()};
-document.addEventListener('visibilitychange',()=>{if(document.hidden&&stream){stream.getTracks().forEach(t=>t.stop());stream=null;video.srcObject=null;hint.textContent='Камера остановлена. Нажми «Камера», чтобы продолжить.'}});const originalCamera=document.getElementById('start').onclick;
+autoBtn.onclick=()=>{resetCV();tracking=false;manualLock=false;targetCenter=null;previous=null;lastSearch=Date.now();findOpening()};
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&stream){resetCV();stream.getTracks().forEach(t=>t.stop());stream=null;video.srcObject=null;hint.textContent='Камера остановлена. Нажми «Камера», чтобы продолжить.'}});const originalCamera=document.getElementById('start').onclick;
 document.getElementById('start').onclick=async()=>{await originalCamera();previous=null;tracking=false;found=false;targetCenter=null;lostFrames=0;lastSearch=0;if(stream)setTimeout(()=>{if(stream&&!photo){lastSearch=Date.now();findOpening()}},800)};
 const originalUpload=document.getElementById('file').onchange;
 document.getElementById('file').onchange=e=>{tracking=false;previous=null;originalUpload(e)};
 
-canvas.addEventListener('pointerup',()=>{if(drag>=0)return;manualLock=true;found=true;tracking=true;previous=captureGray();lostFrames=0;hint.textContent='Положение скорректировано. Отслеживание продолжается.'});
+canvas.addEventListener('pointerup',()=>{if(drag>=0)return;resetCV();manualLock=true;found=true;tracking=true;previous=captureGray();lostFrames=0;hint.textContent='Положение скорректировано. Отслеживание продолжается.'});
 setInterval(()=>{if(!stream||photo||drag>=0||document.hidden)return;if(tracking)updateTracking();else if(!found&&Date.now()-lastSearch>2500){lastSearch=Date.now();findOpening()}},260);
 
 </script></body></html>
