@@ -60,7 +60,7 @@ self.onmessage=e=>{
   const midY=(t+b)/2,midX=(l+r)/2;
   const intersection=side=>{
    const slope=side.tilt,k=top.tilt;
-   const y=(top.y+k*(side.x-midX)+k*slope*midY)/(1-k*slope);
+   const y=(top.y+k*(side.x-midX)-k*slope*midY)/(1-k*slope);
    const x=side.x+slope*(y-midY);
    return [x,y];
   };
