@@ -123,14 +123,6 @@ function refinePhotoJambQuad(quad){
  q[0][1]+=bestDy;q[1][1]+=bestDy;
  const minX=ox,maxX=ox+sw*scale,minY=oy,maxY=oy+sh*scale;
  if(q.some(p=>p[0]<minX||p[0]>maxX||p[1]<minY||p[1]>maxY))return quad;
- // The detector usually finds the inner leaf edge, whereas the captured
- // product includes the entire frame. Expand gently toward the outer jamb.
- const avgWidth=(Math.hypot(q[1][0]-q[0][0],q[1][1]-q[0][1])+Math.hypot(q[2][0]-q[3][0],q[2][1]-q[3][1]))/2;
- const avgHeight=(Math.hypot(q[3][0]-q[0][0],q[3][1]-q[0][1])+Math.hypot(q[2][0]-q[1][0],q[2][1]-q[1][1]))/2;
- const padX=avgWidth*.025,padTop=avgHeight*.035,padBottom=avgHeight*.008;
- q[0][0]-=padX;q[3][0]-=padX;q[1][0]+=padX;q[2][0]+=padX;
- q[0][1]-=padTop;q[1][1]-=padTop;q[2][1]+=padBottom;q[3][1]+=padBottom;
- if(q.some(p=>p[0]<minX||p[0]>maxX||p[1]<minY||p[1]>maxY))return quad;
  return validDoorQuad(q)?q:quad;
 }
 function plausibleDoorAnchor(p){
@@ -255,7 +247,7 @@ try{
   const [l,t,r,b]=result.best,sx=canvas.width/probe.width,sy=canvas.height/probe.height;
   const candidate=result.quad.map(p=>[p[0]*sx,p[1]*sy]);
   if(!validDoorQuad(candidate)||!plausibleDoorAnchor(candidate)){if(photo)setBusy(null);else liveSearchStatus();if(photo){markOpening=true;manualCorners=[];hint.textContent='סמנו את ארבע פינות הפתח';draw()}return}
-  setBusy(null);points=photo?refinePhotoJambQuad(candidate):candidate;found=true;autoSearch=false;manualLock=false;tracking=!!stream&&!photo;
+  setBusy(null);points=photo?candidate:refinePhotoJambQuad(candidate);found=true;autoSearch=false;manualLock=false;tracking=!!stream&&!photo;
   previous=tracking?captureGray():null;lostFrames=0;if(tracking&&previous)initializeJambReference(previous);
   if(tracking&&cvReady&&previous)seedCV(previous);
   if(photo){tracking=false}
