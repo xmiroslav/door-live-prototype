@@ -3,7 +3,7 @@
    The door is captured only when the customer clicks the button.
    Keep all layers and pseudo-elements in #bigdoor. */
 (function () {
-  const VIEWER = 'https://xmiroslav.github.io/door-live-prototype/?v=20&return=' + encodeURIComponent(window.location.href);
+  const VIEWER = 'https://xmiroslav.github.io/door-live-prototype/?v=21&return=' + encodeURIComponent(window.location.href);
   const SCRIPT = 'https://cdn.jsdelivr.net/npm/html-to-image@1.11.13/dist/html-to-image.js';
   let loading;
   const mobileQuery = window.matchMedia('(max-width: 1024px) and (pointer: coarse)');
@@ -37,17 +37,17 @@
       const lib = await loadLibrary();
       await document.fonts?.ready;
       const image = await lib.toPng(target, {
-        pixelRatio: 1.5,
+        pixelRatio: 3,
         cacheBust: true,
         backgroundColor: 'transparent',
-        filter: node => !(node instanceof Element && node.matches('.door-color-panel,.floorplace'))
+        filter: node => !(node instanceof Element && node.matches('.tambur,.door-color-panel,.floorplace,.alertplace'))
       });
       // Send after viewer loads; mobile Safari can defer opening the new tab.
       let attempts = 0;
       const send = () => {
-        if (viewer.closed || ++attempts > 20) return;
+        if (viewer.closed || ++attempts > 35) return;
         viewer.postMessage({type:'unidoors-door-image',image}, 'https://xmiroslav.github.io');
-        if (attempts < 20) setTimeout(send, 700);
+        if (attempts < 35) setTimeout(send, 550);
       };
       send();
     } catch (error) {
@@ -67,7 +67,7 @@
     button.type = 'button';
     button.textContent = 'הצג את הדלת בבית שלי';
     button.hidden = true;
-    button.style.cssText = 'display:none;margin:12px auto;padding:13px 22px;border:0;border-radius:9px;background:#167ba4;color:#fff;font:600 16px Arial;cursor:pointer';
+    button.style.cssText = 'display:none;margin:12px auto;padding:13px 22px;border:0;border-radius:30px;background:#CD8080;color:#fff;font:600 16px Arial;cursor:pointer';
     button.addEventListener('click', preview);
     target.appendChild(button);
     syncVisibility();
