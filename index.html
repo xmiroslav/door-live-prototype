@@ -11,7 +11,8 @@ header{height:46px;padding:0 13px;background:#ffffffed;border:0;z-index:12}
 #start{background:#173c3a}#save{background:#cd8080}#choosePhoto{background:#fff;color:#173c3a;border:1px solid #ccd7d4}
 .panel{bottom:74px}
 @media(max-width:390px){.side{gap:5px}.side button{padding:7px 6px;font-size:10px}.bottom button{font-size:11px}}
-</style></head><body><main><header><b>DOOR <span style="color:#cd8080">LIVE</span></b><a class="back" id="back" href="https://doorapp.catom.site/">חזרה לאתר ←</a></header><div class="stage" id="stage"><video id="video" autoplay muted playsinline></video><canvas id="canvas"></canvas><div id="doorStatus" hidden></div><div class="hint" id="hint">המערכת מחפשת פתח דלת אוטומטית. אפשר לגעת בפתח כדי לדייק.</div><div class="side"><button id="auto" title="חיפוש אוטומטי מחדש">◎ חיפוש מחדש</button><button id="mark" title="סימון ארבע פינות הפתח">⌖ סימון ידני</button><button id="adjust" title="עריכת ארבע פינות הדלת">✥ התאמת פינות</button></div></div><section class="panel" id="panel"><h4>צבע הדלת</h4><div class="options" id="colors"></div><h4>ידית</h4><div class="options" id="handles"></div><h4>חלון</h4><div class="options" id="windows"></div><small>השינויים מוצגים מיד. המידות והמחיר אינם מחושבים כאן.</small></section><div class="bottom"><button id="start">הפעלת מצלמה</button><button id="save">צילום ושמירה</button><button id="choosePhoto">תמונה קיימת</button><input type="file" id="file" accept="image/*" capture="environment"><input type="file" id="gallery" accept="image/*"></div></main><script>
+#busy[hidden]{display:none}#busy{position:absolute;z-index:20;top:52px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:9px;background:#fff;color:#173c3a;border-radius:22px;padding:9px 14px;box-shadow:0 5px 25px #0004;font-size:12px;white-space:nowrap}.spinner{width:17px;height:17px;border:2px solid #ecd0d0;border-top-color:#cd8080;border-radius:50%;animation:spin .7s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+</style></head><body><main><header><b>DOOR <span style="color:#cd8080">LIVE</span></b><a class="back" id="back" href="https://doorapp.catom.site/">חזרה לאתר ←</a></header><div class="stage" id="stage"><video id="video" autoplay muted playsinline></video><canvas id="canvas"></canvas><div id="doorStatus" hidden></div><div id="busy" role="status" aria-live="polite" hidden><span class="spinner"></span><span id="busyText">מעבדים תמונה…</span></div><div class="hint" id="hint">המערכת מחפשת פתח דלת אוטומטית. אפשר לגעת בפתח כדי לדייק.</div><div class="side"><button id="auto" title="חיפוש אוטומטי מחדש">◎ חיפוש מחדש</button><button id="mark" title="סימון ארבע פינות הפתח">⌖ סימון ידני</button><button id="adjust" title="עריכת ארבע פינות הדלת">✥ התאמת פינות</button></div></div><section class="panel" id="panel"><h4>צבע הדלת</h4><div class="options" id="colors"></div><h4>ידית</h4><div class="options" id="handles"></div><h4>חלון</h4><div class="options" id="windows"></div><small>השינויים מוצגים מיד. המידות והמחיר אינם מחושבים כאן.</small></section><div class="bottom"><button id="start">הפעלת מצלמה</button><button id="save">צילום ושמירה</button><button id="choosePhoto">תמונה קיימת</button><input type="file" id="file" accept="image/*" capture="environment"><input type="file" id="gallery" accept="image/*"></div></main><script>
 let found=false,exporting=false,manualAdjusting=false,autoSearch=true,autoCandidate=null,autoCandidateCount=0,editCorners=false,markOpening=false,searchFailures=0,manualCorners=[];
 const allowedSites=['doorapp.catom.site','www.unidoors.co.il','unidoors.co.il'];
 const returnParam=new URLSearchParams(location.search).get('return');
@@ -67,14 +68,15 @@ for(let y=0;y<N;y++)for(let x=0;x<N;x++){const at=(u,v)=>projectQuad(p,u,v);let 
 let lastFrame=0;function loop(t){if(stream&&!photo&&t-lastFrame>65){draw();lastFrame=t}requestAnimationFrame(loop)}requestAnimationFrame(loop);function pos(e){const r=canvas.getBoundingClientRect();return [(e.clientX-r.left)*canvas.width/r.width,(e.clientY-r.top)*canvas.height/r.height]}canvas.addEventListener('pointerdown',e=>{if(!editCorners&&!markOpening)return;const p=pos(e);if(markOpening){manualCorners.push(p);if(manualCorners.length===4){if(!validDoorQuad(manualCorners)){manualCorners=[];hint.textContent='הפינות אינן יוצרות פתח תקין · סמנו מחדש לפי הסדר';draw();return}points=manualCorners.slice();manualLock=true;manualCorners=[];markOpening=false;found=true;autoSearch=false;tracking=false;previous=null;lostFrames=0;resetCV();editCorners=true;hideGuides=false;document.getElementById('adjust').classList.add('active');hint.textContent='הפתח סומן · גררו פינות לתיקון ולחצו על התאמת פינות לסיום'}else hint.textContent='סומנו '+manualCorners.length+' מתוך 4 פינות · המשיכו בכיוון השעון';draw();return}let dist=Infinity;points.forEach((q,i)=>{const d=Math.hypot(q[0]-p[0],q[1]-p[1]);if(d<dist){dist=d;drag=i}});if(!editCorners||dist>32*devicePixelRatio){drag=-1;wasDragging=false;manualAdjusting=false;if(stream&&!photo){targetCenter=[p[0]*probe.width/canvas.width,p[1]*probe.height/canvas.height];selectedByTap=true;autoSearch=false;autoCandidate=null;resetCV();found=false;tracking=false;previous=null;lastSearch=Date.now();markOpening=false;hint.textContent='מחפשים את הפתח שסימנת…';findOpening()}}else{wasDragging=true;manualAdjusting=true;tracking=false;canvas.setPointerCapture(e.pointerId)}});canvas.addEventListener('pointermove',e=>{if(drag<0)return;points[drag]=pos(e);draw()});['pointerup','pointercancel'].forEach(n=>canvas.addEventListener(n,()=>{if(drag>=0&&wasDragging){manualLock=true;found=true;tracking=!!stream;previous=captureGray();lostFrames=0;resetCV();if(cvReady&&previous&&stream)seedCV(previous);hint.textContent='הפינות עודכנו · ניתן להסתיר את נקודות העריכה';}manualAdjusting=false;drag=-1}));document.getElementById('start').onclick=async()=>{try{if(stream)stream.getTracks().forEach(t=>t.stop());stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:640},height:{ideal:480},frameRate:{ideal:20,max:24}},audio:false});video.srcObject=stream;await video.play();photo=null;video.style.transform='scale('+zoom+')';video.style.display='block';document.getElementById('hint').textContent='מחפשים פתח דלת אוטומטית…';draw()}catch(e){alert('המצלמה אינה זמינה. נדרש HTTPS ואישור גישה בדפדפן. '+e.message)}};document.getElementById('choosePhoto').onclick=()=>document.getElementById('gallery').click();
 document.getElementById('file').onchange=loadRoomPhoto;
 document.getElementById('gallery').onchange=loadRoomPhoto;
+function setBusy(message){const el=document.getElementById('busy');el.hidden=!message;if(message)document.getElementById('busyText').textContent=message}
 function loadRoomPhoto(e){
  const f=e.target.files&&e.target.files[0];if(!f)return;
- const url=URL.createObjectURL(f),im=new Image();
+ setBusy('טוענים את התמונה…');hint.textContent='טוענים תמונה…';const url=URL.createObjectURL(f),im=new Image();
  im.onload=()=>{
   invalidateDetection();photo=im;if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}
   video.srcObject=null;video.style.display='none';resetCV();tracking=false;found=false;
   autoSearch=false;manualLock=false;markOpening=false;manualCorners=[];editCorners=false;hideGuides=true;
-  hint.textContent='מנתחים את צילום החדר…';draw();
+  hint.textContent='מנתחים את צילום החדר…';setBusy('מזהים את מסגרת הדלת…');draw();
   setTimeout(()=>{
    targetCenter=null;autoCandidate=null;autoCandidateCount=0;
    // A single still frame cannot pass the live three-frame confirmation.
@@ -84,7 +86,7 @@ function loadRoomPhoto(e){
   },100);
   URL.revokeObjectURL(url);
  };
- im.onerror=()=>{hint.textContent='לא ניתן לפתוח את התמונה';URL.revokeObjectURL(url)};
+ im.onerror=()=>{setBusy(null);hint.textContent='לא ניתן לפתוח את התמונה';URL.revokeObjectURL(url)};
  im.src=url;e.target.value='';
 }
 function findOpeningPhoto(){
@@ -139,12 +141,12 @@ try{
  detectorWorker.onmessage=e=>{
   detectorPending=false;clearTimeout(detectorTimeout);
   const result=e.data;if(!result||result.id!==detectorSeq||result.epoch!==detectorEpoch||result.mode!==(photo?'photo':'live')||found||editCorners||markOpening||(!photo&&!stream))return;
-  if(!result.best){searchFailures++;hint.textContent='לא זוהה פתח · אפשר לבחור סימון ידני';return}
+  if(!result.best){setBusy(null);searchFailures++;hint.textContent=photo?'לא זוהה פתח · סמנו ארבע פינות ידנית':'לא זוהה פתח · אפשר לבחור סימון ידני';if(photo){markOpening=true;manualCorners=[];editCorners=false;hideGuides=true;draw()}return}
   if(!result.stable){hint.textContent='זוהה פתח אפשרי · מאמתים…';return}
   const [l,t,r,b]=result.best,sx=canvas.width/probe.width,sy=canvas.height/probe.height;
   const candidate=(result.quad||[[l,t],[r,t],[r,b],[l,b]]).map(p=>[p[0]*sx,p[1]*sy]);
-  if(!validDoorQuad(candidate))return;
-  points=candidate;found=true;autoSearch=false;manualLock=false;tracking=!!stream&&!photo;
+  if(!validDoorQuad(candidate)){setBusy(null);if(photo){markOpening=true;manualCorners=[];hint.textContent='סמנו את ארבע פינות הפתח';draw()}return}
+  setBusy(null);points=candidate;found=true;autoSearch=false;manualLock=false;tracking=!!stream&&!photo;
   previous=tracking?captureGray():null;lostFrames=0;
   if(tracking&&cvReady&&previous)seedCV(previous);
   if(photo){tracking=false;editCorners=true;hideGuides=false;document.getElementById('adjust').classList.add('active')}
@@ -155,9 +157,9 @@ try{
  detectorWorker.onerror=e=>{console.warn('Door detector worker unavailable',e.message);detectorWorker.terminate();detectorWorker=null;invalidateDetection();if(photo&&!found)findOpeningPhoto()};
 }catch(e){console.warn('Worker disabled',e)}
 function detectOpeningAsync(){
- if(!detectorWorker){if(photo){for(let i=0;i<3&&!found;i++)findOpening();if(found){tracking=false;previous=null;resetCV();editCorners=true;hideGuides=false;document.getElementById('adjust').classList.add('active');hint.textContent='זוהה פתח אפשרי · בדקו והתאימו את הפינות';draw()}else{markOpening=true;manualCorners=[];hint.textContent='סמנו ארבע פינות של הפתח';draw()}}else findOpening();return}
+ if(!detectorWorker){if(photo){setBusy('מזהים את מסגרת הדלת…');for(let i=0;i<3&&!found;i++)findOpening();if(found){setBusy(null);tracking=false;previous=null;resetCV();editCorners=true;hideGuides=false;document.getElementById('adjust').classList.add('active');hint.textContent='זוהה פתח אפשרי · בדקו והתאימו את הפינות';draw()}else{setBusy(null);markOpening=true;manualCorners=[];hint.textContent='סמנו ארבע פינות של הפתח';draw()}}else findOpening();return}
  if(detectorPending||found||editCorners||markOpening)return;
- const gray=captureGray();if(!gray)return;
+ const gray=captureGray();if(!gray){setBusy(null);return}
  detectorPending=true;const id=++detectorSeq,epoch=detectorEpoch,mode=photo?'photo':'live';
  detectorTimeout=setTimeout(()=>{if(detectorPending&&id===detectorSeq&&epoch===detectorEpoch){detectorPending=false;detectorWorker?.terminate();detectorWorker=null;hint.textContent='מצב חיפוש חלופי פעיל';if(photo&&!found)findOpeningPhoto()}},4500);
  const target=targetCenter?targetCenter.slice():null;
@@ -356,9 +358,9 @@ function updateTracking(){
  trackerTimer=setTimeout(()=>{if(trackerPending&&session===trackerSession&&id===trackerSeq){loseTracking()}},2500);
  trackerWorker.postMessage({id,session,buffer:current.buffer,w:probe.width,h:probe.height,quad},[current.buffer]);
 }
-document.getElementById('mark').onclick=()=>{invalidateDetection();resetCV();tracking=false;markOpening=true;manualCorners=[];editCorners=false;hideGuides=true;document.getElementById('adjust').classList.remove('active');hint.textContent='סמנו 4 פינות: שמאל למעלה, ימין למעלה, ימין למטה, שמאל למטה';draw()};
+document.getElementById('mark').onclick=()=>{setBusy(null);invalidateDetection();resetCV();tracking=false;markOpening=true;manualCorners=[];editCorners=false;hideGuides=true;document.getElementById('adjust').classList.remove('active');hint.textContent='סמנו 4 פינות: שמאל למעלה, ימין למעלה, ימין למטה, שמאל למטה';draw()};
 document.getElementById('adjust').onclick=()=>{if(!found){hint.textContent='יש לזהות פתח תחילה · לחצו על סימון ידני';return}editCorners=!editCorners;hideGuides=!editCorners;markOpening=false;document.getElementById('adjust').classList.toggle('active',editCorners);if(!editCorners&&stream&&!photo){resetCV();previous=captureGray();tracking=true;lostFrames=0;if(cvReady&&previous)seedCV(previous)}else if(editCorners){tracking=false;resetCV()}hint.textContent=editCorners?'גררו את ארבע הפינות למשקוף ולחצו שוב לסיום':'ההתאמה נשמרה · מעקב פעיל';draw()};
-autoBtn.onclick=()=>{invalidateDetection();if(photo){found=false;findOpeningPhoto();return}resetCV();tracking=false;found=false;manualLock=false;selectedByTap=false;targetCenter=null;autoSearch=true;autoCandidate=null;autoCandidateCount=0;previous=null;lastSearch=0;editCorners=false;hideGuides=true;markOpening=false;searchFailures=0,manualCorners=[];hint.textContent='מחפשים פתח דלת אוטומטית…';draw()};
+autoBtn.onclick=()=>{setBusy(null);invalidateDetection();if(photo){found=false;findOpeningPhoto();return}resetCV();tracking=false;found=false;manualLock=false;selectedByTap=false;targetCenter=null;autoSearch=true;autoCandidate=null;autoCandidateCount=0;previous=null;lastSearch=0;editCorners=false;hideGuides=true;markOpening=false;searchFailures=0,manualCorners=[];hint.textContent='מחפשים פתח דלת אוטומטית…';draw()};
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&stream){resetCV();stream.getTracks().forEach(t=>t.stop());stream=null;video.srcObject=null;hint.textContent='המצלמה נעצרה · הפעילו אותה מחדש'}});const originalCamera=document.getElementById('start').onclick;
 document.getElementById('start').onclick=async()=>{invalidateDetection();resetCV();await originalCamera();previous=null;tracking=false;found=false;selectedByTap=false;targetCenter=null;autoSearch=true;autoCandidate=null;autoCandidateCount=0;lostFrames=0;lastSearch=0;editCorners=false;hideGuides=true;markOpening=false;if(stream){hint.textContent='מחפשים פתח דלת אוטומטית…'}};
 // Photo import uses its own still-image detection flow; no live tracker is started.
