@@ -86,7 +86,60 @@ self.onmessage=e=>{
   const winner=candidates[0];
   // No automatic overlay without multiple coherent, contrasted frame edges.
   if(!winner||winner.quality<15){self.postMessage({id,epoch,mode,best:null,quality:0});return}
-  self.postMessage({id,epoch,mode,best:winner.rect,quad:winner.quad,quality:winner.quality,stable:true,method:'photo-lines'});
+  // Find the OUTER edges of the existing jambs: the supplied door texture
+  // already contains its own frame, so mapping to the inner leaf is wrong.
+  // Each side is evaluated along its full length, not at a single pixel.
+  // Do not extrapolate/expand if a coherent exterior edge is absent.
+  const outer=winner.quad.map(p=>p.slice());
+  const lineEvidence=(a,b,dx,dy,axis)=>{
+   let score=0,hits=0;
+   for(let j=2;j<=22;j++){
+    const t=j/24,x=Math.round(a[0]*(1-t)+b[0]*t+dx),
+      y=Math.round(a[1]*(1-t)+b[1]*t+dy);
+    if(!inside(x,y))return null;
+    const v=axis==='x'?Math.max(vx[y*w+x],vx[y*w+x-1],vx[y*w+x+1]):
+      Math.max(hy[y*w+x],hy[(y-1)*w+x],hy[(y+1)*w+x]);
+    score+=Math.min(v,100);if(v>=18)hits++;
+   }
+   return {score:score/21,hits};
+  };
+  const sideShift=(a,b,sign)=>{
+   const baseline=lineEvidence(outer[a],outer[b],0,0,'x');
+   if(!baseline)return;
+   const width=(Math.hypot(outer[1][0]-outer[0][0],outer[1][1]-outer[0][1])+
+     Math.hypot(outer[2][0]-outer[3][0],outer[2][1]-outer[3][1]))/2;
+   const radius=Math.min(14,Math.max(3,Math.round(width*.10)));
+   let best=null;
+   for(let d=2;d<=radius;d+=2){
+    const evidence=lineEvidence(outer[a],outer[b],sign*d,0,'x');
+    if(!evidence||evidence.hits<15||evidence.score<18)continue;
+    if(evidence.score<baseline.score*.88)continue;
+    if(!best||evidence.score>best.score*1.08||(evidence.score>=best.score*.94&&d>best.d))
+      best={d,score:evidence.score};
+   }
+   if(best){outer[a][0]+=sign*best.d;outer[b][0]+=sign*best.d}
+  };
+  sideShift(0,3,-1);
+  sideShift(1,2,1);
+  const topBase=lineEvidence(outer[0],outer[1],0,0,'y');
+  if(topBase){
+   const height=(Math.hypot(outer[3][0]-outer[0][0],outer[3][1]-outer[0][1])+
+     Math.hypot(outer[2][0]-outer[1][0],outer[2][1]-outer[1][1]))/2;
+   const radius=Math.min(12,Math.max(3,Math.round(height*.045)));
+   let best=null;
+   for(let d=2;d<=radius;d+=2){
+    const evidence=lineEvidence(outer[0],outer[1],0,-d,'y');
+    if(!evidence||evidence.hits<14||evidence.score<18||evidence.score<topBase.score*.88)continue;
+    if(!best||evidence.score>best.score*1.08||(evidence.score>=best.score*.94&&d>best.d))
+      best={d,score:evidence.score};
+   }
+   if(best){outer[0][1]-=best.d;outer[1][1]-=best.d}
+  }
+  const cross=(a,b,c)=>(b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0]);
+  const validOuter=outer.every((p,i)=>inside(Math.round(p[0]),Math.round(p[1]))&&
+    cross(p,outer[(i+1)%4],outer[(i+2)%4])>0);
+  const frameQuad=validOuter?outer:winner.quad;
+  self.postMessage({id,epoch,mode,best:winner.rect,quad:frameQuad,quality:winner.quality,stable:true,method:'photo-outer-jambs'});
   return;
  }
  const gray=new Uint8Array(buffer),W=w+1,iv=new Float32Array(W*(h+1)),ih=new Float32Array(W*(h+1));
