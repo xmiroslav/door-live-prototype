@@ -122,7 +122,7 @@ try{
   if(!result.best){searchFailures++;hint.textContent='לא זוהה פתח · אפשר לבחור סימון ידני';return}
   if(!result.stable){hint.textContent='זוהה פתח אפשרי · מאמתים…';return}
   const [l,t,r,b]=result.best,sx=canvas.width/probe.width,sy=canvas.height/probe.height;
-  const candidate=[[l*sx,t*sy],[r*sx,t*sy],[r*sx,b*sy],[l*sx,b*sy]];
+  const candidate=(result.quad||[[l,t],[r,t],[r,b],[l,b]]).map(p=>[p[0]*sx,p[1]*sy]);
   if(!validDoorQuad(candidate))return;
   points=candidate;found=true;autoSearch=false;manualLock=false;tracking=!!stream&&!photo;
   previous=tracking?captureGray():null;lostFrames=0;
