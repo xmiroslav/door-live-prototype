@@ -3,7 +3,7 @@
    The door is captured only when the customer clicks the button.
    Keep all layers and pseudo-elements in #bigdoor. */
 (function () {
-  const VIEWER = 'https://xmiroslav.github.io/door-live-prototype/?v=18';
+  const VIEWER = 'https://xmiroslav.github.io/door-live-prototype/?v=19';
   const SCRIPT = 'https://cdn.jsdelivr.net/npm/html-to-image@1.11.13/dist/html-to-image.js';
   let loading;
   const mobileQuery = window.matchMedia('(max-width: 1024px) and (pointer: coarse)');
@@ -35,17 +35,19 @@
     if (button) { button.disabled = true; button.textContent = 'מכין תצוגה…'; }
     try {
       const lib = await loadLibrary();
+      await document.fonts?.ready;
       const image = await lib.toPng(target, {
-        pixelRatio: Math.min(window.devicePixelRatio || 1, 2),
+        pixelRatio: 1.5,
         cacheBust: true,
         backgroundColor: 'transparent',
         filter: node => !(node instanceof Element && node.matches('.door-color-panel,.floorplace'))
       });
+      // Send after viewer loads; mobile Safari can defer opening the new tab.
       let attempts = 0;
       const send = () => {
-        if (viewer.closed || ++attempts > 40) return;
+        if (viewer.closed || ++attempts > 20) return;
         viewer.postMessage({type:'unidoors-door-image',image}, 'https://xmiroslav.github.io');
-        if (attempts < 40) setTimeout(send, 500);
+        if (attempts < 20) setTimeout(send, 700);
       };
       send();
     } catch (error) {
