@@ -215,14 +215,14 @@ try{
   hint.textContent=photo?'זוהה פתח אפשרי · בדקו שהדלת מגיעה עד הרצפה ותקנו את ארבע הפינות':'הדלת מוצגת · לתיקון לחצו על התאמת פינות';
   draw();
  };
- detectorWorker.onerror=e=>{console.warn('Door detector worker unavailable',e.message);detectorWorker.terminate();detectorWorker=null;invalidateDetection();if(photo&&!found)findOpeningPhoto()};
+ detectorWorker.onerror=e=>{console.warn('Door detector worker unavailable',e.message);detectorWorker.terminate();detectorWorker=null;invalidateDetection();if(photo&&!found){setBusy(null);markOpening=true;manualCorners=[];editCorners=false;hideGuides=true;hint.textContent='לא ניתן לזהות אוטומטית · סמנו ארבע פינות ידנית';draw()}};
 }catch(e){console.warn('Worker disabled',e)}
 function detectOpeningAsync(){
- if(!detectorWorker){if(photo){setBusy('מזהים את מסגרת הדלת…');for(let i=0;i<3&&!found;i++)findOpening();if(found){setBusy(null);tracking=false;previous=null;resetCV();editCorners=false;hideGuides=true;document.getElementById('adjust').classList.remove('active');hint.textContent='זוהה פתח אפשרי · בדקו והתאימו את הפינות';draw()}else{setBusy(null);markOpening=true;manualCorners=[];hint.textContent='סמנו ארבע פינות של הפתח';draw()}}else findOpening();return}
+ if(!detectorWorker){if(photo){setBusy(null);markOpening=true;manualCorners=[];editCorners=false;hideGuides=true;hint.textContent='הזיהוי האוטומטי אינו זמין · סמנו ארבע פינות ידנית';draw();return;setBusy('מזהים את מסגרת הדלת…');for(let i=0;i<3&&!found;i++)findOpening();if(found){setBusy(null);tracking=false;previous=null;resetCV();editCorners=false;hideGuides=true;document.getElementById('adjust').classList.remove('active');hint.textContent='זוהה פתח אפשרי · בדקו והתאימו את הפינות';draw()}else{setBusy(null);markOpening=true;manualCorners=[];hint.textContent='סמנו ארבע פינות של הפתח';draw()}}else findOpening();return}
  if(detectorPending||found||editCorners||markOpening)return;
  const gray=captureGray();if(!gray){setBusy(null);return}
  detectorPending=true;const id=++detectorSeq,epoch=detectorEpoch,mode=photo?'photo':'live';
- detectorTimeout=setTimeout(()=>{if(detectorPending&&id===detectorSeq&&epoch===detectorEpoch){detectorPending=false;detectorWorker?.terminate();detectorWorker=null;hint.textContent='מצב חיפוש חלופי פעיל';if(photo&&!found)findOpeningPhoto()}},photo?14000:4500);
+ detectorTimeout=setTimeout(()=>{if(detectorPending&&id===detectorSeq&&epoch===detectorEpoch){detectorPending=false;detectorWorker?.terminate();detectorWorker=null;setBusy(null);if(photo&&!found){markOpening=true;manualCorners=[];editCorners=false;hideGuides=true;hint.textContent='הזיהוי נמשך זמן רב · סמנו ארבע פינות ידנית';draw()}else hint.textContent='החיפוש מתעכב · ניתן לסמן את הפתח ידנית'}},photo?8000:4500);
  const target=targetCenter?targetCenter.slice():null;
  detectorWorker.postMessage({id,epoch,mode,w:probe.width,h:probe.height,buffer:gray.buffer,target,still:!!photo},[gray.buffer]);
 }
