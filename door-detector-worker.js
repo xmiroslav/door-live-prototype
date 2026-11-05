@@ -1,7 +1,7 @@
 'use strict';
 let last=null,streak=0;
 self.onmessage=e=>{
- const {id,buffer,w,h,target}=e.data;
+ const {id,buffer,w,h,target,still}=e.data;
  const gray=new Uint8Array(buffer),W=w+1,iv=new Float32Array(W*(h+1)),ih=new Float32Array(W*(h+1));
  for(let y=1;y<=h;y++)for(let x=1;x<=w;x++){
   const xx=x-1,yy=y-1,i=yy*w+xx,k=y*W+x;
@@ -30,5 +30,5 @@ self.onmessage=e=>{
  }
  if(!best||quality<(target?10:17)){last=null;streak=0;self.postMessage({id,best:null,quality});return}
  if(last&&Math.hypot(...best.map((x,i)=>x-last[i]))<18)streak++;else streak=1;
- last=best;self.postMessage({id,best,quality,stable:streak>=3});
+ last=best;self.postMessage({id,best,quality,stable:!!still||streak>=3});
 };
