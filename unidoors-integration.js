@@ -83,7 +83,7 @@
       alert('לא ניתן להכין את הדלת לתצוגה. בדוק תמונות חיצוניות ו-CORS.');
       viewer.close();
     } finally {
-      if (button) { button.disabled = false; button.innerHTML = '<span aria-hidden="true" style="font-size:23px;line-height:1">🚪</span><span style="font-size:11px;line-height:1.2;font-weight:700">'+buttonLabel+'</span>'; }
+      if (button) { button.disabled = false; button.innerHTML = '<span style="font-size:12px;line-height:1.3;font-weight:700">'+buttonLabel+'</span>'; }
     }
   }
   function init() {
@@ -92,7 +92,7 @@
     const button = document.createElement('button');
     button.id = 'unidoors-ar-preview';
     button.type = 'button';
-    button.innerHTML = '<span aria-hidden="true" style="font-size:23px;line-height:1">🚪</span><span style="font-size:11px;line-height:1.2;font-weight:700">'+buttonLabel+'</span>';
+    button.innerHTML = '<span style="font-size:12px;line-height:1.3;font-weight:700">'+buttonLabel+'</span>';
     button.setAttribute('aria-label', 'הצג את הדלת בבית שלי');
     button.title = 'הצג את הדלת בבית שלי';
     button.hidden = true;
