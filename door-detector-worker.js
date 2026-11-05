@@ -6,140 +6,96 @@ self.onmessage=e=>{
  // Dedicated still-photo detector: line segments, not brute-force rectangles.
  // Work in the original letterboxed image coordinates, with no crop.
  if(mode==='photo'){
-  const gray=new Uint8Array(buffer),vx=new Uint8Array(w*h),hy=new Uint8Array(w*h);
-  let minX=w,maxX=0,minY=h,maxY=0;
-  for(let y=4;y<h-4;y++)for(let x=4;x<w-4;x++){
+  const gray=new Uint8Array(buffer),gx=new Uint8Array(w*h),gy=new Uint8Array(w*h);
+  // The upload uses neutral-gray letterboxing; restrict all search to actual pixels.
+  let x0=w,y0=h,x1=0,y1=0;
+  for(let y=3;y<h-3;y++)for(let x=3;x<w-3;x++){
    const i=y*w+x;
-   const a=Math.abs(gray[i+2]-gray[i-2]),b=Math.abs(gray[i+2*w]-gray[i-2*w]);
-   vx[i]=Math.min(255,a);hy[i]=Math.min(255,b);
-   // Letterbox pixels are neutral gray, unlike room content.
-   if(gray[i]!==127){minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y)}
+   gx[i]=Math.min(255,Math.abs(gray[i+2]-gray[i-2]));
+   gy[i]=Math.min(255,Math.abs(gray[i+2*w]-gray[i-2*w]));
+   if(gray[i]!==127){x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y)}
   }
-  const inside=(x,y)=>x>=minX+3&&x<=maxX-3&&y>=minY+3&&y<=maxY-3;
-  const vertical=(x,top,bottom,slope)=>{
-   let total=0,valid=0;
-   for(let j=0;j<24;j++){
-    const y=top+(bottom-top)*(j+.5)/24,px=Math.round(x+slope*(y-(top+bottom)/2)),py=Math.round(y);
-    if(!inside(px,py))return null;
-    const g=Math.max(vx[py*w+px],vx[py*w+px-1],vx[py*w+px+1]);
-    total+=Math.min(130,g);if(g>18)valid++;
-   }
-   return valid>=15?total/24*(valid/24):null;
+  if(x1<=x0||y1<=y0){self.postMessage({id,epoch,mode,best:null,quality:0});return}
+  const iw=x1-x0,ih=y1-y0,valid=(x,y)=>x>=x0+3&&x<=x1-3&&y>=y0+3&&y<=y1-3;
+  const edge=(x,y,vertical)=>{
+   x=Math.round(x);y=Math.round(y);if(!valid(x,y))return 0;
+   const arr=vertical?gx:gy,i=y*w+x;
+   return Math.max(arr[i],arr[i-1],arr[i+1],arr[i-w],arr[i+w]);
   };
-  const horizontal=(y,x0,x1,tilt)=>{
-   let total=0,valid=0;
-   for(let j=0;j<20;j++){
-    const x=x0+(x1-x0)*(j+.5)/20,py=Math.round(y+tilt*(x-(x0+x1)/2)),px=Math.round(x);
-    if(!inside(px,py))return null;
-    const g=Math.max(hy[py*w+px],hy[(py-1)*w+px],hy[(py+1)*w+px]);
-    total+=Math.min(130,g);if(g>17)valid++;
+  const measure=(p,q,vertical)=>{
+   let sum=0,hits=0,thirds=[0,0,0];
+   for(let j=0;j<30;j++){
+    const t=(j+.5)/30,x=p[0]*(1-t)+q[0]*t,y=p[1]*(1-t)+q[1]*t;
+    const v=edge(x,y,vertical);sum+=Math.min(v,110);
+    if(v>13){hits++;thirds[Math.floor(j/10)]++}
    }
-   return valid>=11?total/20*(valid/20):null;
+   return {value:sum/30,coverage:hits/30,parts:thirds.filter(v=>v>=3).length};
   };
-  const spanX=maxX-minX,spanY=maxY-minY;
-  // Doorframe is typically taller than wide, but oblique perspective is allowed.
+  // Detect long jambs first. Interior windows, furniture and second-room doors
+  // may be stronger locally but should lose to the complete foreground frame.
   const candidates=[];
-  const stride=Math.max(3,Math.round(w/90));
-  for(let top=minY+5;top<minY+spanY*.54;top+=stride*2){
-   for(let height=Math.round(spanY*.30);height<=spanY*.91;height+=stride*3){
-    const bottom=top+height;if(bottom>maxY-3)continue;
+  const dx=Math.max(3,Math.round(iw/85)),dy=Math.max(4,Math.round(ih/95));
+  const yTopMax=y0+ih*.58;
+  for(let top=y0+6;top<yTopMax;top+=dy*2){
+   for(let bottom=y1-5;bottom>top+ih*.38;bottom-=dy*2){
+    const height=bottom-top;
     const sides=[];
-    for(let x=minX+6;x<maxX-6;x+=stride){
-     for(const slope of [-.30,-.20,-.10,0,.10,.20,.30]){
-      const strength=vertical(x,top,bottom,slope);
-      if(strength!==null&&strength>15)sides.push({x,slope,strength});
+    for(let x=x0+6;x<x1-6;x+=dx){
+     for(const slope of [-.27,-.18,-.09,0,.09,.18,.27]){
+      const p=[x-slope*height/2,top],q=[x+slope*height/2,bottom];
+      if(!valid(p[0],top)||!valid(q[0],bottom))continue;
+      const e=measure(p,q,true);
+      if(e.parts===3&&e.coverage>=.53&&e.value>=11)sides.push({x,slope,p,q,e});
      }
     }
-    sides.sort((a,b)=>b.strength-a.strength);
-    const strongest=sides.slice(0,24);
-    for(let a=0;a<strongest.length;a++)for(let b=0;b<strongest.length;b++){
-     const L=strongest[a],R=strongest[b],width=R.x-L.x;
-     if(width<spanX*.08||width>Math.min(spanX*.65,height*.86)||height/width<1.3||height/width>4.8)continue;
-     const topLeft=L.x-L.slope*height/2,topRight=R.x-R.slope*height/2;
-     const bottomLeft=L.x+L.slope*height/2,bottomRight=R.x+R.slope*height/2;
-     if(topRight-topLeft<width*.55||bottomRight-bottomLeft<width*.55)continue;
-     let bestTop=null;
+    sides.sort((a,b)=>b.e.value-a.e.value);
+    // Keep geographically separated lines, not multiple tilts on the same jamb.
+    const distinct=[];
+    for(const side of sides){
+     if(distinct.every(v=>Math.abs(v.x-side.x)>dx*2))distinct.push(side);
+     if(distinct.length>=28)break;
+    }
+    for(let i=0;i<distinct.length;i++)for(let j=0;j<distinct.length;j++){
+     const L=distinct[i],R=distinct[j],width=R.x-L.x;
+     if(width<iw*.13||width>iw*.85||height/width<1.25||height/width>5.3)continue;
+     if(R.p[0]-L.p[0]<width*.55||R.q[0]-L.q[0]<width*.55)continue;
+     let lintel=null;
      for(const tilt of [-.20,-.10,0,.10,.20]){
-      const score=horizontal(top,topLeft+3,topRight-3,tilt);
-      if(score!==null&&(!bestTop||score>bestTop.score))bestTop={tilt,score};
+      const p=[L.p[0],top-tilt*width/2],q=[R.p[0],top+tilt*width/2];
+      const e=measure(p,q,false);
+      if(e.parts>=2&&e.coverage>=.45&&(!lintel||e.value>lintel.e.value))lintel={p,q,e};
      }
-     if(!bestTop||bestTop.score<13)continue;
-     let floor=0,bestBottom=bottom;
-     for(const dy of [-8,-4,0,4,8]){
-      const yy=bottom+dy;if(yy>=maxY-3)continue;
-      const strength=horizontal(yy,bottomLeft+4,bottomRight-4,0)||0;
-      if(strength>floor){floor=strength;bestBottom=yy}
-     }
-     if(floor<9)continue;
-     const q=[[topLeft,top-bestTop.tilt*(topRight-topLeft)/2],[topRight,top+bestTop.tilt*(topRight-topLeft)/2],[bottomRight,bestBottom],[bottomLeft,bestBottom]];
-     if(q.some(p=>!inside(Math.round(p[0]),Math.round(p[1]))))continue;
-     const center=(L.x+R.x)/2;
-     const score=Math.min(L.strength,R.strength)*2+bestTop.score*1.6+Math.min(floor,55)*1.0
-       +Math.min(height/spanY,.75)*15-Math.abs(center-(minX+maxX)/2)/spanX*12;
-     if(candidates.length<8||score>candidates[candidates.length-1].score){
-      candidates.push({score,quad:q,quality:Math.min(L.strength,R.strength,bestTop.score),rect:[Math.min(topLeft,bottomLeft),top,Math.max(topRight,bottomRight),bestBottom]});
-      candidates.sort((a,b)=>b.score-a.score);if(candidates.length>8)candidates.pop();
-     }
+     if(!lintel||lintel.e.value<10)continue;
+     // Bottom must be near the end of both jambs; a floor line is useful,
+     // but may be invisible beneath carpet or open-door thresholds.
+     const foot=measure(L.q,R.q,false);
+     const quad=[lintel.p,lintel.q,R.q,L.q];
+     const full=height/ih,area=height*width/(iw*ih);
+     const center=Math.abs((L.x+R.x)/2-(x0+x1)/2)/iw;
+     const score=Math.min(L.e.value,R.e.value)*1.4+lintel.e.value*.9+
+       Math.min(foot.value,50)*.20+full*30+area*24-
+       center*7+(bottom-y0)/ih*10;
+     candidates.push({score,quad,quality:Math.min(L.e.value,R.e.value,lintel.e.value),
+       rect:[Math.min(L.p[0],L.q[0]),top,Math.max(R.p[0],R.q[0]),bottom],full,area});
     }
    }
   }
-  const winner=candidates[0];
-  // No automatic overlay without multiple coherent, contrasted frame edges.
-  if(!winner||winner.quality<15){self.postMessage({id,epoch,mode,best:null,quality:0});return}
-  // Find the OUTER edges of the existing jambs: the supplied door texture
-  // already contains its own frame, so mapping to the inner leaf is wrong.
-  // Each side is evaluated along its full length, not at a single pixel.
-  // Do not extrapolate/expand if a coherent exterior edge is absent.
-  const outer=winner.quad.map(p=>p.slice());
-  const lineEvidence=(a,b,dx,dy,axis)=>{
-   let score=0,hits=0;
-   for(let j=2;j<=22;j++){
-    const t=j/24,x=Math.round(a[0]*(1-t)+b[0]*t+dx),
-      y=Math.round(a[1]*(1-t)+b[1]*t+dy);
-    if(!inside(x,y))return null;
-    const v=axis==='x'?Math.max(vx[y*w+x],vx[y*w+x-1],vx[y*w+x+1]):
-      Math.max(hy[y*w+x],hy[(y-1)*w+x],hy[(y+1)*w+x]);
-    score+=Math.min(v,100);if(v>=18)hits++;
-   }
-   return {score:score/21,hits};
-  };
-  const sideShift=(a,b,sign)=>{
-   const baseline=lineEvidence(outer[a],outer[b],0,0,'x');
-   if(!baseline)return;
-   const width=(Math.hypot(outer[1][0]-outer[0][0],outer[1][1]-outer[0][1])+
-     Math.hypot(outer[2][0]-outer[3][0],outer[2][1]-outer[3][1]))/2;
-   const radius=Math.min(14,Math.max(3,Math.round(width*.10)));
-   let best=null;
-   for(let d=2;d<=radius;d+=2){
-    const evidence=lineEvidence(outer[a],outer[b],sign*d,0,'x');
-    if(!evidence||evidence.hits<15||evidence.score<18)continue;
-    if(evidence.score<baseline.score*.88)continue;
-    if(!best||evidence.score>best.score*1.08||(evidence.score>=best.score*.94&&d>best.d))
-      best={d,score:evidence.score};
-   }
-   if(best){outer[a][0]+=sign*best.d;outer[b][0]+=sign*best.d}
-  };
-  sideShift(0,3,-1);
-  sideShift(1,2,1);
-  const topBase=lineEvidence(outer[0],outer[1],0,0,'y');
-  if(topBase){
-   const height=(Math.hypot(outer[3][0]-outer[0][0],outer[3][1]-outer[0][1])+
-     Math.hypot(outer[2][0]-outer[1][0],outer[2][1]-outer[1][1]))/2;
-   const radius=Math.min(12,Math.max(3,Math.round(height*.045)));
-   let best=null;
-   for(let d=2;d<=radius;d+=2){
-    const evidence=lineEvidence(outer[0],outer[1],0,-d,'y');
-    if(!evidence||evidence.hits<14||evidence.score<18||evidence.score<topBase.score*.88)continue;
-    if(!best||evidence.score>best.score*1.08||(evidence.score>=best.score*.94&&d>best.d))
-      best={d,score:evidence.score};
-   }
-   if(best){outer[0][1]-=best.d;outer[1][1]-=best.d}
+  candidates.sort((a,b)=>b.score-a.score);
+  // Prefer the outer enclosing jambs over a smaller door/window deeper in view.
+  // Nested frames must not win solely on contrast.
+  let winner=null;
+  for(const c of candidates.slice(0,90)){
+   const enclosing=candidates.filter(o=>o!==c&&o.area>c.area*1.45&&
+     o.quad[0][0]<c.quad[0][0]&&o.quad[1][0]>c.quad[1][0]&&
+     o.quad[0][1]<c.quad[0][1]&&o.quad[3][1]>=c.quad[3][1]-.06*ih&&
+     o.quality>=c.quality*.62);
+   if(enclosing.length)continue;
+   if(!winner||c.score>winner.score)winner=c;
   }
-  const cross=(a,b,c)=>(b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0]);
-  const validOuter=outer.every((p,i)=>inside(Math.round(p[0]),Math.round(p[1]))&&
-    cross(p,outer[(i+1)%4],outer[(i+2)%4])>0);
-  const frameQuad=validOuter?outer:winner.quad;
-  self.postMessage({id,epoch,mode,best:winner.rect,quad:frameQuad,quality:winner.quality,stable:true,method:'photo-outer-jambs'});
+  if(!winner)winner=candidates[0];
+  if(!winner||winner.quality<10){self.postMessage({id,epoch,mode,best:null,quality:0});return}
+  self.postMessage({id,epoch,mode,best:winner.rect,quad:winner.quad,
+   quality:winner.quality,stable:true,method:'photo-foreground-frame'});
   return;
  }
  const gray=new Uint8Array(buffer),W=w+1,iv=new Float32Array(W*(h+1)),ih=new Float32Array(W*(h+1));
