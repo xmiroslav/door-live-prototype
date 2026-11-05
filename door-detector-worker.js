@@ -13,19 +13,36 @@ self.onmessage=e=>{
  const sum=(a,x1,y1,x2,y2)=>{x1=Math.max(0,x1|0);x2=Math.min(w,x2|0);y1=Math.max(0,y1|0);y2=Math.min(h,y2|0);return a[y2*W+x2]-a[y1*W+x2]-a[y2*W+x1]+a[y1*W+x1]};
  const v=(x,y1,y2)=>sum(iv,x-2,y1,x+3,y2)/Math.max(1,5*(y2-y1));
  const hor=(y,x1,x2)=>sum(ih,x1,y-2,x2,y+3)/Math.max(1,5*(x2-x1));
- let best=null,score=-1e10,quality=0;
- for(let top=10;top<h*.67;top+=6)for(let width=Math.max(18,Math.round(w*.055));width<=Math.min(w*.82,Math.round(w*.75));width+=Math.max(4,Math.round(w*.023))){
-  for(const aspect of [1.7,1.9,2.1,2.3,2.5,2.7]){
-   const height=width*aspect,bottom=top+height;if(bottom>h-7)continue;
-   for(let left=6;left+width<w-6;left+=Math.max(5,Math.round(w*.027))){
-    const right=left+width,vl=v(left,top,bottom),vr=v(right,top,bottom),lintel=hor(top,left,right);
-    const cx=target?target[0]:w*.5,cy=target?target[1]:h*.5;
-    const distance=Math.hypot((left+width/2-cx)*1.1,((top+bottom)/2-cy)*.85);
-    if(target&&(cx<left||cx>right||cy<top||cy>bottom))continue;
-    const continuity=Math.min(v(left,top,top+height*.4),v(left,top+height*.6,bottom))+Math.min(v(right,top,top+height*.4),v(right,top+height*.6,bottom));
-    const q=Math.min(vl,vr,lintel);
-    const s=2*Math.min(vl,vr)+.7*(vl+vr)+1.3*lintel+.45*continuity+q*1.5-distance*(target?2.2:.12);
-    if(s>score){score=s;quality=q;best=[left,top,right,bottom]}
+ // Coarse-to-fine multi-candidate search. Do not lock onto a single high-contrast
+ // rectangle (cupboard, window, picture frame) before checking jamb geometry.
+ const candidates=[];
+ const consider=(rect,score,quality)=>{
+  if(!Number.isFinite(score))return;
+  const near=candidates.findIndex(c=>Math.abs(c.rect[0]-rect[0])<12&&Math.abs(c.rect[1]-rect[1])<12&&Math.abs(c.rect[2]-rect[2])<12&&Math.abs(c.rect[3]-rect[3])<18);
+  if(near>=0){if(score>candidates[near].score)candidates[near]={rect,score,quality};return}
+  candidates.push({rect,score,quality});candidates.sort((a,b)=>b.score-a.score);
+  if(candidates.length>14)candidates.length=14;
+ };
+ const margin=mode==='photo'?6:9;
+ const step=Math.max(5,Math.round(w*.026));
+ for(let top=margin;top<h*.62;top+=step){
+  for(let width=Math.max(20,Math.round(w*.08));width<=Math.min(w*.78,Math.round(h*.47));width+=step){
+   for(const aspect of [1.65,1.9,2.15,2.4,2.7,3.0]){
+    const height=width*aspect,bottom=top+height;
+    if(bottom>h-margin)continue;
+    for(let left=margin;left+width<w-margin;left+=step){
+     const right=left+width,vl=v(left,top,bottom),vr=v(right,top,bottom),lintel=hor(top,left,right);
+     const cx=target?target[0]:w*.5,cy=target?target[1]:h*.5;
+     if(target&&(cx<left||cx>right||cy<top||cy>bottom))continue;
+     const continuity=Math.min(v(left,top,top+height*.42),v(left,top+height*.58,bottom))+Math.min(v(right,top,top+height*.42),v(right,top+height*.58,bottom));
+     const q=Math.min(vl,vr,lintel);
+     // Penalize an edge that exists only in one short region.
+     const balance=Math.min(vl,vr)/Math.max(1,Math.max(vl,vr));
+     const distance=Math.hypot((left+width/2-cx)*1.1,((top+bottom)/2-cy)*.85);
+     const strength=2*Math.min(vl,vr)+.65*(vl+vr)+1.35*lintel+.5*continuity+q*1.5;
+     const score=strength*(.65+.35*balance)-distance*(target?1.8:.12);
+     if(q>(target?7:11))consider([left,top,right,bottom],score,q);
+    }
    }
   }
  }
@@ -93,7 +110,34 @@ self.onmessage=e=>{
   if(!quad.every((p,i)=>cross(p,quad[(i+1)%4],quad[(i+2)%4])>0))return null;
   return quad;
  };
- if(!best||quality<(target?10:17)){last=null;streak=0;self.postMessage({id,epoch,mode,best:null,quality});return}
+ // Verify geometry for multiple candidates. Reject letterbox bars and false frames.
+ let winner=null;
+ for(const candidate of candidates){
+  const rect=candidate.rect,quad=refineQuad(rect);
+  if(!quad)continue;
+  const [tl,tr,br,bl]=quad;
+  const topWidth=Math.hypot(tr[0]-tl[0],tr[1]-tl[1]);
+  const bottomWidth=Math.hypot(br[0]-bl[0],br[1]-bl[1]);
+  const leftHeight=Math.hypot(bl[0]-tl[0],bl[1]-tl[1]);
+  const rightHeight=Math.hypot(br[0]-tr[0],br[1]-tr[1]);
+  if(Math.min(topWidth,bottomWidth)<18||Math.min(leftHeight,rightHeight)<35)continue;
+  if(Math.max(topWidth,bottomWidth)/Math.min(topWidth,bottomWidth)>1.65)continue;
+  if(Math.max(leftHeight,rightHeight)/Math.min(leftHeight,rightHeight)>1.4)continue;
+  // Require the detected frame to have enough visible area for reliable placement.
+  const area=(topWidth+bottomWidth)*(leftHeight+rightHeight)*.25;
+  if(area<w*h*(mode==='photo'?.008:.014))continue;
+  const [l,t,r,b]=rect;
+  const leftEdge=v(l,t,b),rightEdge=v(r,t,b),topEdge=hor(t,l,r);
+  const continuity=Math.min(v(l,t,t+(b-t)*.4),v(l,t+(b-t)*.6,b),v(r,t,t+(b-t)*.4),v(r,t+(b-t)*.6,b));
+  const frameQuality=Math.min(leftEdge,rightEdge,topEdge);
+  if(frameQuality<(target?9:14)||continuity<8)continue;
+  // Higher preference for long, coherent jambs rather than isolated interior lines.
+  const rank=candidate.score+continuity*1.8+Math.min(frameQuality,55)*1.5;
+  if(!winner||rank>winner.rank)winner={rect,quad,rank,quality:frameQuality};
+ }
+ if(!winner){last=null;streak=0;self.postMessage({id,epoch,mode,best:null,quality:0});return}
+ const best=winner.rect,quality=winner.quality,quad=winner.quad;
  if(last&&Math.hypot(...best.map((x,i)=>x-last[i]))<18)streak++;else streak=1;
- last=best;const quad=refineQuad(best);self.postMessage({id,epoch,mode,best,quad,quality,stable:!!still||streak>=3});
+ last=best;
+ self.postMessage({id,epoch,mode,best,quad,quality,stable:!!still||streak>=3});
 };
