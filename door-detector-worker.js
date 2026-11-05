@@ -36,7 +36,7 @@ self.onmessage=e=>{
  const edgeY=(x,y)=>{x=Math.round(x);y=Math.round(y);if(x<3||x>=w-3||y<3||y>=h-3)return 0;return Math.abs(gray[(y+2)*w+x]-gray[(y-2)*w+x])};
  const fitSide=(x0,y0,y1)=>{
   let optimum=null;
-  for(let shift=-12;shift<=12;shift+=3)for(let tilt=-.22;tilt<=.22;tilt+=.035){
+  for(let shift=-16;shift<=16;shift+=2)for(let tilt=-.38;tilt<=.38;tilt+=.025){
    let sum=0,valid=0;
    for(let j=1;j<=14;j++){const t=j/15,y=y0+(y1-y0)*t,x=x0+shift+tilt*(y-(y0+y1)/2);const v=edgeX(x,y);sum+=Math.min(v,100);if(v>12)valid++}
    const value=sum/14+valid*1.8-Math.abs(shift)*.5-Math.abs(tilt)*12;
@@ -46,7 +46,7 @@ self.onmessage=e=>{
  };
  const fitTop=(y0,x0,x1)=>{
   let optimum=null;
-  for(let shift=-10;shift<=10;shift+=2)for(let tilt=-.18;tilt<=.18;tilt+=.03){
+  for(let shift=-14;shift<=14;shift+=2)for(let tilt=-.28;tilt<=.28;tilt+=.025){
    let sum=0,valid=0;
    for(let j=1;j<=12;j++){const t=j/13,x=x0+(x1-x0)*t,y=y0+shift+tilt*(x-(x0+x1)/2);const v=edgeY(x,y);sum+=Math.min(v,100);if(v>12)valid++}
    const value=sum/12+valid*1.8-Math.abs(shift)*.6-Math.abs(tilt)*12;
@@ -56,7 +56,7 @@ self.onmessage=e=>{
  };
  const refineQuad=rect=>{
   const [l,t,r,b]=rect,left=fitSide(l,t,b),right=fitSide(r,t,b),top=fitTop(t,l,r);
-  if(!left||!right||!top||left.valid<5||right.valid<5||top.valid<4)return null;
+  if(!left||!right||!top||left.valid<6||right.valid<6||top.valid<5)return null;
   const midY=(t+b)/2,midX=(l+r)/2;
   const intersection=side=>{
    const slope=side.tilt,k=top.tilt;
@@ -75,7 +75,18 @@ self.onmessage=e=>{
    if(adjusted>floorStrength){floorStrength=adjusted;floorY=yy}
   }
   if(floorStrength<13)floorY=b;
-  const bl=[left.x+left.tilt*(floorY-midY),floorY],br=[right.x+right.tilt*(floorY-midY),floorY];
+  // Independently estimate the floor edge on each half to accommodate oblique views.
+  const floorAt=(x1,x2)=>{
+   let chosen=floorY,peak=-Infinity;
+   for(let yy=Math.max(t+45,floorY-18);yy<=Math.min(h-5,floorY+18);yy+=2){
+    const strength=hor(yy,x1,x2)-Math.abs(yy-floorY)*.65;
+    if(strength>peak){peak=strength;chosen=yy}
+   }
+   return peak>11?chosen:floorY;
+  };
+  const mid=(left.x+right.x)/2;
+  const leftFloor=floorAt(left.x+5,mid-3),rightFloor=floorAt(mid+3,right.x-5);
+  const bl=[left.x+left.tilt*(leftFloor-midY),leftFloor],br=[right.x+right.tilt*(rightFloor-midY),rightFloor];
   const quad=[tl,tr,br,bl];
   const cross=(a,b,c)=>(b[0]-a[0])*(c[1]-b[1])-(b[1]-a[1])*(c[0]-b[0]);
   if(quad.some(p=>!p.every(Number.isFinite))||quad[1][0]-quad[0][0]<25||quad[2][0]-quad[3][0]<20)return null;
