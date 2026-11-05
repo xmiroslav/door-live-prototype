@@ -14,17 +14,17 @@ self.onmessage=e=>{
  const v=(x,y1,y2)=>sum(iv,x-2,y1,x+3,y2)/Math.max(1,5*(y2-y1));
  const hor=(y,x1,x2)=>sum(ih,x1,y-2,x2,y+3)/Math.max(1,5*(x2-x1));
  let best=null,score=-1e10,quality=0;
- for(let top=14;top<h*.48;top+=8)for(let width=40;width<=Math.min(w*.72,126);width+=8){
-  for(const aspect of [1.85,2.05,2.25]){
+ for(let top=10;top<h*.67;top+=6)for(let width=Math.max(18,Math.round(w*.055));width<=Math.min(w*.82,Math.round(w*.75));width+=Math.max(4,Math.round(w*.023))){
+  for(const aspect of [1.7,1.9,2.1,2.3,2.5,2.7]){
    const height=width*aspect,bottom=top+height;if(bottom>h-7)continue;
-   for(let left=7;left+width<w-7;left+=8){
+   for(let left=6;left+width<w-6;left+=Math.max(5,Math.round(w*.027))){
     const right=left+width,vl=v(left,top,bottom),vr=v(right,top,bottom),lintel=hor(top,left,right);
     const cx=target?target[0]:w*.5,cy=target?target[1]:h*.5;
     const distance=Math.hypot((left+width/2-cx)*1.1,((top+bottom)/2-cy)*.85);
     if(target&&(cx<left||cx>right||cy<top||cy>bottom))continue;
     const continuity=Math.min(v(left,top,top+height*.4),v(left,top+height*.6,bottom))+Math.min(v(right,top,top+height*.4),v(right,top+height*.6,bottom));
     const q=Math.min(vl,vr,lintel);
-    const s=2*Math.min(vl,vr)+.7*(vl+vr)+1.3*lintel+.45*continuity+q*1.5-distance*(target?2.2:.32);
+    const s=2*Math.min(vl,vr)+.7*(vl+vr)+1.3*lintel+.45*continuity+q*1.5-distance*(target?2.2:.12);
     if(s>score){score=s;quality=q;best=[left,top,right,bottom]}
    }
   }
