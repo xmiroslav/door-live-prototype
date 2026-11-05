@@ -326,11 +326,11 @@ function ensureTrackerWorker(){
    trackerPending=false;clearTimeout(trackerTimer);
    if(!tracking||!stream||photo||editCorners||markOpening||drag>=0)return;
    if(r.ready)return;
-   if(!r.ok){trackingConfidence=0;lostFrames++;hint.textContent='מעקב לא יציב · מחפשים נקודות ייחוס';if(lostFrames>=4)loseTracking();return}
+   if(!r.ok){trackingConfidence=0;lostFrames++;hint.textContent='מעקב לא יציב · מחפשים נקודות ייחוס';if(lostFrames>=2)loseTracking();return}
    const sx=canvas.width/probe.width,sy=canvas.height/probe.height;
    const projected=r.proposed.map(p=>[p[0]*sx,p[1]*sy]);
    if(!acceptTrackedQuad(captureGray(),projected)||projected.some((p,i)=>Math.hypot(p[0]-points[i][0],p[1]-points[i][1])>canvas.width*.12)){
-    lostFrames++;if(lostFrames>=4)loseTracking();return;
+    lostFrames++;if(lostFrames>=2)loseTracking();return;
    }
    const alpha=r.confidence>.8?.8:.65;
    points=points.map((p,i)=>[p[0]*(1-alpha)+projected[i][0]*alpha,p[1]*(1-alpha)+projected[i][1]*alpha]);
@@ -364,8 +364,8 @@ function acceptTrackedQuad(gray,quad){
  if(!validDoorQuad(quad))return false;
  const evidence=jambEvidence(gray,quad);
  // Low-edge surfaces cannot be reliably anchored using this method.
- if(jambReference<7){jambReference=Math.max(jambReference,evidence);return true}
- if(evidence<Math.max(5,jambReference*.42)){jambFailures++;return jambFailures<2}
+ if(jambReference<9){jambReference=Math.max(jambReference,evidence);return true}
+ if(evidence<Math.max(7,jambReference*.55)){jambFailures++;return false}
  jambFailures=0;jambReference=jambReference*.97+evidence*.03;
  return true;
 }
@@ -381,7 +381,7 @@ function updateTracking(){
  const current=captureGray();if(!current)return;
  if(cvReady){
   if(trackCV(current)){previous=current;return}
-  if(lostFrames>=4)loseTracking();
+  if(lostFrames>=2)loseTracking();
   previous=current;return;
  }
  if(!ensureTrackerWorker()){loseTracking();return}
@@ -392,8 +392,8 @@ function updateTracking(){
 }
 document.getElementById('mark').onclick=()=>{setBusy(null);invalidateDetection();resetCV();tracking=false;markOpening=true;manualCorners=[];editCorners=false;hideGuides=true;document.getElementById('adjust').classList.remove('active');hint.textContent='סמנו 4 פינות: שמאל למעלה, ימין למעלה, ימין למטה, שמאל למטה';draw()};
 document.getElementById('adjust').onclick=()=>{if(!found){hint.textContent='יש לזהות פתח תחילה · לחצו על סימון ידני';return}editCorners=!editCorners;hideGuides=!editCorners;markOpening=false;document.getElementById('adjust').classList.toggle('active',editCorners);if(!editCorners&&stream&&!photo){resetCV();previous=captureGray();tracking=true;lostFrames=0;if(previous)initializeJambReference(previous);if(cvReady&&previous)seedCV(previous)}else if(editCorners){tracking=false;resetCV()}hint.textContent=editCorners?'גררו את ארבע הפינות למשקוף ולחצו שוב לסיום':'ההתאמה נשמרה · מעקב פעיל';draw()};
-autoBtn.onclick=()=>{setBusy(null);invalidateDetection();if(photo){found=false;findOpeningPhoto();return}resetCV();tracking=false;found=false;manualLock=false;selectedByTap=false;targetCenter=null;autoSearch=true;autoCandidate=null;autoCandidateCount=0;previous=null;lastSearch=0;editCorners=false;hideGuides=true;markOpening=false;searchFailures=0,manualCorners=[];hint.textContent='מחפשים פתח דלת אוטומטית…';draw()};
-document.addEventListener('visibilitychange',()=>{if(document.hidden&&stream){resetCV();stream.getTracks().forEach(t=>t.stop());stream=null;video.srcObject=null;hint.textContent='המצלמה נעצרה · הפעילו אותה מחדש'}});const originalCamera=document.getElementById('start').onclick;
+autoBtn.onclick=()=>{setBusy(null);invalidateDetection();if(photo){found=false;findOpeningPhoto();return}resetCV();tracking=false;found=false;manualLock=false;selectedByTap=false;targetCenter=null;autoSearch=true;searchStart=Date.now();setBusy('סורקים את המשקוף…');autoCandidate=null;autoCandidateCount=0;previous=null;lastSearch=0;editCorners=false;hideGuides=true;markOpening=false;searchFailures=0,manualCorners=[];hint.textContent='מחפשים פתח דלת אוטומטית…';draw()};
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&stream){resetCV();stream.getTracks().forEach(t=>t.stop());stream=null;video.srcObject=null;setBusy(null);hint.textContent='המצלמה נעצרה · הפעילו אותה מחדש'}});const originalCamera=document.getElementById('start').onclick;
 document.getElementById('start').onclick=async()=>{invalidateDetection();resetCV();await originalCamera();previous=null;tracking=false;found=false;selectedByTap=false;targetCenter=null;autoSearch=true;autoCandidate=null;autoCandidateCount=0;lostFrames=0;lastSearch=0;editCorners=false;hideGuides=true;markOpening=false;if(stream){hint.textContent='מחפשים פתח דלת אוטומטית…'}};
 // Photo import uses its own still-image detection flow; no live tracker is started.
 
