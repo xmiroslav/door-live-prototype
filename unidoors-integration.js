@@ -3,7 +3,7 @@
    The door is captured only when the customer clicks the button.
    Keep all layers and pseudo-elements in #bigdoor. */
 (function () {
-  const VIEWER = 'https://xmiroslav.github.io/door-live-prototype/?v=54&return=' + encodeURIComponent(window.location.href);
+  const VIEWER = 'https://xmiroslav.github.io/door-live-prototype/?v=72&return=' + encodeURIComponent(window.location.href);
   const SCRIPT = 'https://cdn.jsdelivr.net/npm/html-to-image@1.11.13/dist/html-to-image.js';
   let loading;
   const buttonLabel='הדלת אצלי בבית';
@@ -66,13 +66,15 @@
       const listener=e=>{
         if(e.source!==viewer||e.origin!=='https://xmiroslav.github.io')return;
         if(e.data?.type==='unidoors-door-ack'&&e.data.transferId===transferId){
-          acknowledged=true;window.removeEventListener('message',listener);
+          acknowledged=true;window.removeEventListener('message',listener);window.removeEventListener('message',readyListener);
         }
       };
       window.addEventListener('message',listener);
+      const readyListener=e=>{if(e.source===viewer&&e.origin==='https://xmiroslav.github.io'&&e.data?.type==='unidoors-viewer-ready'&&!acknowledged){viewer.postMessage({type:'unidoors-door-image',image,transferId},'https://xmiroslav.github.io')}};
+      window.addEventListener('message',readyListener);
       const send=()=>{
         if(acknowledged||viewer.closed||++attempts>80){
-          window.removeEventListener('message',listener);return;
+          window.removeEventListener('message',listener);window.removeEventListener('message',readyListener);return;
         }
         viewer.postMessage({type:'unidoors-door-image',image,transferId},'https://xmiroslav.github.io');
         setTimeout(send,650);
