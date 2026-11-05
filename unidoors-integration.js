@@ -6,7 +6,7 @@
   const VIEWER = 'https://xmiroslav.github.io/door-live-prototype/?v=18';
   const SCRIPT = 'https://cdn.jsdelivr.net/npm/html-to-image@1.11.13/dist/html-to-image.js';
   let loading;
-  const mobileQuery = window.matchMedia('(max-width: 767px) and (pointer: coarse)');
+  const mobileQuery = window.matchMedia('(max-width: 1024px) and (pointer: coarse)');
   function mobileAllowed() { return mobileQuery.matches; }
   function syncVisibility() {
     const button = document.getElementById('unidoors-ar-preview');
@@ -64,7 +64,8 @@
     button.id = 'unidoors-ar-preview';
     button.type = 'button';
     button.textContent = 'הצג את הדלת בבית שלי';
-    button.style.cssText = 'display:block;margin:12px auto;padding:13px 22px;border:0;border-radius:9px;background:#167ba4;color:#fff;font:600 16px Arial;cursor:pointer';
+    button.hidden = true;
+    button.style.cssText = 'display:none;margin:12px auto;padding:13px 22px;border:0;border-radius:9px;background:#167ba4;color:#fff;font:600 16px Arial;cursor:pointer';
     button.addEventListener('click', preview);
     target.appendChild(button);
     syncVisibility();
