@@ -3,9 +3,15 @@
    The door is captured only when the customer clicks the button.
    Keep all layers and pseudo-elements in #bigdoor. */
 (function () {
-  const VIEWER = 'https://xmiroslav.github.io/door-live-prototype/?v=17';
+  const VIEWER = 'https://xmiroslav.github.io/door-live-prototype/?v=18';
   const SCRIPT = 'https://cdn.jsdelivr.net/npm/html-to-image@1.11.13/dist/html-to-image.js';
   let loading;
+  const mobileQuery = window.matchMedia('(max-width: 767px) and (pointer: coarse)');
+  function mobileAllowed() { return mobileQuery.matches; }
+  function syncVisibility() {
+    const button = document.getElementById('unidoors-ar-preview');
+    if (button) { button.hidden = !mobileAllowed(); button.style.display = mobileAllowed() ? 'block' : 'none'; }
+  }
   function loadLibrary() {
     if (window.htmlToImage) return Promise.resolve(window.htmlToImage);
     if (loading) return loading;
@@ -19,6 +25,7 @@
     return loading;
   }
   async function preview() {
+    if (!mobileAllowed()) return;
     const target = document.getElementById('bigdoor');
     if (!target) { alert('Door element #bigdoor not found'); return; }
     // Open synchronously with the click so mobile browsers do not block the popup.
@@ -50,7 +57,7 @@
     }
   }
   function init() {
-    if (document.getElementById('unidoors-ar-preview')) return;
+    if (document.getElementById('unidoors-ar-preview')) { syncVisibility(); return; }
     const target = document.querySelector('.resultdoor') || document.querySelector('.greydoorplace.parentgrid1') || document.getElementById('bigdoor')?.parentElement;
     if (!target || !document.getElementById('bigdoor')) return;
     const button = document.createElement('button');
@@ -60,7 +67,9 @@
     button.style.cssText = 'display:block;margin:12px auto;padding:13px 22px;border:0;border-radius:9px;background:#167ba4;color:#fff;font:600 16px Arial;cursor:pointer';
     button.addEventListener('click', preview);
     target.appendChild(button);
+    syncVisibility();
   }
+  mobileQuery.addEventListener?.('change', syncVisibility);
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
   // The configurator may render the selected door after initial page load.
