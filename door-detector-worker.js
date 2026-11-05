@@ -36,8 +36,8 @@ self.onmessage=e=>{
   const candidates=[];
   const dx=Math.max(3,Math.round(iw/85)),dy=Math.max(4,Math.round(ih/95));
   const yTopMax=y0+ih*.58;
-  for(let top=y0+6;top<yTopMax;top+=dy*3){
-   for(let bottom=y1-5;bottom>top+ih*.38;bottom-=dy*3){
+  for(let top=y0+6;top<yTopMax;top+=dy*4){
+   for(let bottom=y1-5;bottom>top+ih*.38;bottom-=dy*4){
     const height=bottom-top;
     const sides=[];
     for(let x=x0+6;x<x1-6;x+=dx){
@@ -53,7 +53,7 @@ self.onmessage=e=>{
     const distinct=[];
     for(const side of sides){
      if(distinct.every(v=>Math.abs(v.x-side.x)>dx*2))distinct.push(side);
-     if(distinct.length>=16)break;
+     if(distinct.length>=12)break;
     }
     for(let i=0;i<distinct.length;i++)for(let j=0;j<distinct.length;j++){
      const L=distinct[i],R=distinct[j],width=R.x-L.x;
@@ -75,8 +75,17 @@ self.onmessage=e=>{
      const score=Math.min(L.e.value,R.e.value)*1.4+lintel.e.value*.9+
        Math.min(foot.value,50)*.20+full*30+area*24-
        center*7+(bottom-y0)/ih*10;
-     candidates.push({score,quad,quality:Math.min(L.e.value,R.e.value,lintel.e.value),
-       rect:[Math.min(L.p[0],L.q[0]),top,Math.max(R.p[0],R.q[0]),bottom],full,area});
+     const item={score,quad,quality:Math.min(L.e.value,R.e.value,lintel.e.value),
+       rect:[Math.min(L.p[0],L.q[0]),top,Math.max(R.p[0],R.q[0]),bottom],full,area};
+     // Keep a bounded beam of distinct plausible frames; do not accumulate
+     // thousands of near-duplicate hypotheses in a mobile worker.
+     const duplicate=candidates.findIndex(c=>Math.abs(c.quad[0][0]-quad[0][0])<dx*3&&
+       Math.abs(c.quad[1][0]-quad[1][0])<dx*3&&Math.abs(c.quad[0][1]-quad[0][1])<dy*3&&
+       Math.abs(c.quad[3][1]-quad[3][1])<dy*4);
+     if(duplicate>=0){if(score>candidates[duplicate].score)candidates[duplicate]=item}
+     else if(candidates.length<80||score>candidates[candidates.length-1].score)candidates.push(item);
+     candidates.sort((a,b)=>b.score-a.score);
+     if(candidates.length>80)candidates.length=80;
     }
    }
   }
