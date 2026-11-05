@@ -3,7 +3,7 @@
    The door is captured only when the customer clicks the button.
    Keep all layers and pseudo-elements in #bigdoor. */
 (function () {
-  const VIEWER = 'https://xmiroslav.github.io/door-live-prototype/';
+  const VIEWER = 'https://xmiroslav.github.io/door-live-prototype/?v=17';
   const SCRIPT = 'https://cdn.jsdelivr.net/npm/html-to-image@1.11.13/dist/html-to-image.js';
   let loading;
   function loadLibrary() {
@@ -36,9 +36,9 @@
       });
       let attempts = 0;
       const send = () => {
-        if (viewer.closed || ++attempts > 20) return;
+        if (viewer.closed || ++attempts > 40) return;
         viewer.postMessage({type:'unidoors-door-image',image}, 'https://xmiroslav.github.io');
-        if (attempts < 20) setTimeout(send, 500);
+        if (attempts < 40) setTimeout(send, 500);
       };
       send();
     } catch (error) {
@@ -51,8 +51,8 @@
   }
   function init() {
     if (document.getElementById('unidoors-ar-preview')) return;
-    const target = document.querySelector('.resultdoor');
-    if (!target) return;
+    const target = document.querySelector('.resultdoor') || document.querySelector('.greydoorplace.parentgrid1') || document.getElementById('bigdoor')?.parentElement;
+    if (!target || !document.getElementById('bigdoor')) return;
     const button = document.createElement('button');
     button.id = 'unidoors-ar-preview';
     button.type = 'button';
@@ -63,4 +63,7 @@
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
+  // The configurator may render the selected door after initial page load.
+  let attempts = 0;
+  const timer = setInterval(() => { init(); if (document.getElementById('unidoors-ar-preview') || ++attempts >= 40) clearInterval(timer); }, 500);
 })();
