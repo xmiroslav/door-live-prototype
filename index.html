@@ -147,7 +147,7 @@ try{
   const candidate=(result.quad||[[l,t],[r,t],[r,b],[l,b]]).map(p=>[p[0]*sx,p[1]*sy]);
   if(!validDoorQuad(candidate)){setBusy(null);if(photo){markOpening=true;manualCorners=[];hint.textContent='סמנו את ארבע פינות הפתח';draw()}return}
   setBusy(null);points=candidate;found=true;autoSearch=false;manualLock=false;tracking=!!stream&&!photo;
-  previous=tracking?captureGray():null;lostFrames=0;
+  previous=tracking?captureGray():null;lostFrames=0;if(tracking&&previous)initializeJambReference(previous);
   if(tracking&&cvReady&&previous)seedCV(previous);
   if(photo){tracking=false;editCorners=true;hideGuides=false;document.getElementById('adjust').classList.add('active')}
   else{editCorners=false;hideGuides=true}
@@ -290,13 +290,13 @@ function trackCV(gray){
   });
   const area=q=>q.reduce((v,p,i)=>v+p[0]*q[(i+1)%4][1]-q[(i+1)%4][0]*p[1],0)/2;
   const oldArea=area(points),newArea=area(projected);
-  if(!validDoorQuad(projected)||projected.some((q,i)=>!Number.isFinite(q[0])||!Number.isFinite(q[1])||Math.hypot(q[0]-points[i][0],q[1]-points[i][1])>canvas.width*.22)||
+  if(!acceptTrackedQuad(gray,projected)||projected.some((q,i)=>!Number.isFinite(q[0])||!Number.isFinite(q[1])||Math.hypot(q[0]-points[i][0],q[1]-points[i][1])>canvas.width*.22)||
    oldArea*newArea<=0||Math.abs(newArea/oldArea)<.65||Math.abs(newArea/oldArea)>1.5){
    lostFrames++;return false;
   }
   const alpha=count/kept.length>.85?.8:.65;
   points=points.map((q,i)=>[q[0]*(1-alpha)+projected[i][0]*alpha,q[1]*(1-alpha)+projected[i][1]*alpha]);
-  trackingConfidence=count/kept.length;lostFrames=0;hint.textContent='מעקב פעיל · '+Math.round(trackingConfidence*100)+'%';
+  trackingConfidence=count/kept.length;lostFrames=0;hint.textContent='מעקב תמונה · בדיקת משקוף פעילה';
   // Keep only geometrically consistent features, not drifting or occluded pixels.
   const tracked=[];
   for(let j=0;j<kept.length;j++)if(inlierMask.data[j])tracked.push(b[j*2],b[j*2+1]);
@@ -327,19 +327,49 @@ function ensureTrackerWorker(){
    if(!r.ok){trackingConfidence=0;lostFrames++;hint.textContent='מעקב לא יציב · מחפשים נקודות ייחוס';if(lostFrames>=4)loseTracking();return}
    const sx=canvas.width/probe.width,sy=canvas.height/probe.height;
    const projected=r.proposed.map(p=>[p[0]*sx,p[1]*sy]);
-   if(!validDoorQuad(projected)||projected.some((p,i)=>Math.hypot(p[0]-points[i][0],p[1]-points[i][1])>canvas.width*.12)){
+   if(!acceptTrackedQuad(captureGray(),projected)||projected.some((p,i)=>Math.hypot(p[0]-points[i][0],p[1]-points[i][1])>canvas.width*.12)){
     lostFrames++;if(lostFrames>=4)loseTracking();return;
    }
    const alpha=r.confidence>.8?.8:.65;
    points=points.map((p,i)=>[p[0]*(1-alpha)+projected[i][0]*alpha,p[1]*(1-alpha)+projected[i][1]*alpha]);
-   trackingConfidence=r.confidence;lostFrames=0;hint.textContent='מעקב פעיל · '+Math.round(trackingConfidence*100)+'%';draw();
+   trackingConfidence=r.confidence;lostFrames=0;hint.textContent='מעקב תמונה · בדיקת משקוף פעילה';draw();
   };
   trackerWorker.onerror=e=>{console.warn('Tracker worker failed',e.message);resetWorkerTracking();loseTracking()};
   return true;
  }catch(e){console.warn('Tracker worker unavailable',e);return false}
 }
+
+// Verify the projected jambs against edges in the actual camera frame.
+// Optical-flow inlier percentage alone does not prove the door is on its frame.
+let jambReference=0,jambFailures=0;
+function jambEvidence(gray,quad){
+ if(!gray||!quad)return 0;
+ const w=probe.width,h=probe.height,sx=w/canvas.width,sy=h/canvas.height;
+ let total=0,count=0;
+ for(const edge of [[0,3],[1,2],[0,1]]){
+  const a=quad[edge[0]],b=quad[edge[1]];
+  for(let j=2;j<=18;j++){
+   const t=j/20,x=Math.round((a[0]+(b[0]-a[0])*t)*sx),y=Math.round((a[1]+(b[1]-a[1])*t)*sy);
+   if(x<4||x>=w-4||y<4||y>=h-4)continue;
+   const k=y*w+x;
+   const dx=Math.abs(gray[k+2]-gray[k-2]),dy=Math.abs(gray[k+2*w]-gray[k-2*w]);
+   total+=edge[0]===0&&edge[1]===1?dy:dx;count++;
+  }
+ }
+ return count?total/count:0;
+}
+function acceptTrackedQuad(gray,quad){
+ if(!validDoorQuad(quad))return false;
+ const evidence=jambEvidence(gray,quad);
+ // Low-edge surfaces cannot be reliably anchored using this method.
+ if(jambReference<7){jambReference=Math.max(jambReference,evidence);return true}
+ if(evidence<Math.max(5,jambReference*.42)){jambFailures++;return jambFailures<2}
+ jambFailures=0;jambReference=jambReference*.97+evidence*.03;
+ return true;
+}
+function initializeJambReference(gray){jambReference=jambEvidence(gray,points);jambFailures=0}
 function loseTracking(){
- tracking=false;found=false;previous=null;trackingConfidence=0;resetCV();resetWorkerTracking();
+ tracking=false;found=false;previous=null;trackingConfidence=0;jambReference=0;jambFailures=0;resetCV();resetWorkerTracking();
  autoSearch=!manualLock;autoCandidate=null;autoCandidateCount=0;lastSearch=0;
  hint.textContent='המעקב אבד · כוונו שוב לפתח או סמנו ידנית';draw();
 }
@@ -359,7 +389,7 @@ function updateTracking(){
  trackerWorker.postMessage({id,session,buffer:current.buffer,w:probe.width,h:probe.height,quad},[current.buffer]);
 }
 document.getElementById('mark').onclick=()=>{setBusy(null);invalidateDetection();resetCV();tracking=false;markOpening=true;manualCorners=[];editCorners=false;hideGuides=true;document.getElementById('adjust').classList.remove('active');hint.textContent='סמנו 4 פינות: שמאל למעלה, ימין למעלה, ימין למטה, שמאל למטה';draw()};
-document.getElementById('adjust').onclick=()=>{if(!found){hint.textContent='יש לזהות פתח תחילה · לחצו על סימון ידני';return}editCorners=!editCorners;hideGuides=!editCorners;markOpening=false;document.getElementById('adjust').classList.toggle('active',editCorners);if(!editCorners&&stream&&!photo){resetCV();previous=captureGray();tracking=true;lostFrames=0;if(cvReady&&previous)seedCV(previous)}else if(editCorners){tracking=false;resetCV()}hint.textContent=editCorners?'גררו את ארבע הפינות למשקוף ולחצו שוב לסיום':'ההתאמה נשמרה · מעקב פעיל';draw()};
+document.getElementById('adjust').onclick=()=>{if(!found){hint.textContent='יש לזהות פתח תחילה · לחצו על סימון ידני';return}editCorners=!editCorners;hideGuides=!editCorners;markOpening=false;document.getElementById('adjust').classList.toggle('active',editCorners);if(!editCorners&&stream&&!photo){resetCV();previous=captureGray();tracking=true;lostFrames=0;if(previous)initializeJambReference(previous);if(cvReady&&previous)seedCV(previous)}else if(editCorners){tracking=false;resetCV()}hint.textContent=editCorners?'גררו את ארבע הפינות למשקוף ולחצו שוב לסיום':'ההתאמה נשמרה · מעקב פעיל';draw()};
 autoBtn.onclick=()=>{setBusy(null);invalidateDetection();if(photo){found=false;findOpeningPhoto();return}resetCV();tracking=false;found=false;manualLock=false;selectedByTap=false;targetCenter=null;autoSearch=true;autoCandidate=null;autoCandidateCount=0;previous=null;lastSearch=0;editCorners=false;hideGuides=true;markOpening=false;searchFailures=0,manualCorners=[];hint.textContent='מחפשים פתח דלת אוטומטית…';draw()};
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&stream){resetCV();stream.getTracks().forEach(t=>t.stop());stream=null;video.srcObject=null;hint.textContent='המצלמה נעצרה · הפעילו אותה מחדש'}});const originalCamera=document.getElementById('start').onclick;
 document.getElementById('start').onclick=async()=>{invalidateDetection();resetCV();await originalCamera();previous=null;tracking=false;found=false;selectedByTap=false;targetCenter=null;autoSearch=true;autoCandidate=null;autoCandidateCount=0;lostFrames=0;lastSearch=0;editCorners=false;hideGuides=true;markOpening=false;if(stream){hint.textContent='מחפשים פתח דלת אוטומטית…'}};
