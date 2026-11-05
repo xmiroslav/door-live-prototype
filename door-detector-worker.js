@@ -31,6 +31,41 @@ self.onmessage=e=>{
    }
    return {value:sum/30,coverage:hits/30,parts:thirds.filter(v=>v>=3).length};
   };
+  // Fast foreground-frame pass: evaluate the outer jambs and lintel together.
+  // An open doorway has no door-leaf texture, so never require an interior panel.
+  const proposals=[];
+  const stepX=Math.max(2,Math.round(iw/95)),stepY=Math.max(3,Math.round(ih/100));
+  for(let top=y0+ih*.06;top<y0+ih*.49;top+=stepY*2){
+   for(let bottom=y0+ih*.74;bottom<y1-2;bottom+=stepY*3){
+    const hh=bottom-top;if(hh<ih*.42)continue;
+    const lines=[];
+    for(let x=x0+iw*.07;x<x1-iw*.07;x+=stepX){
+     const a=measure([x,top],[x,bottom],true);
+     if(a.parts>=2&&a.coverage>=.43&&a.value>=9)lines.push({x,a});
+    }
+    lines.sort((a,b)=>b.a.value-a.a.value);
+    const distinct=[];
+    for(const l of lines){if(distinct.every(d=>Math.abs(d.x-l.x)>stepX*3))distinct.push(l);if(distinct.length>=16)break}
+    for(let i=0;i<distinct.length;i++)for(let j=0;j<distinct.length;j++){
+     const L=distinct[i],R=distinct[j],ww=R.x-L.x;
+     if(ww<iw*.18||ww>iw*.85||hh/ww<1.35||hh/ww>4.8)continue;
+     const t=measure([L.x,top],[R.x,top],false);
+     if(t.parts<2||t.coverage<.42||t.value<9)continue;
+     const foot=measure([L.x,bottom],[R.x,bottom],false);
+     const score=Math.min(L.a.value,R.a.value)*1.4+t.value+
+       Math.min(foot.value,40)*.12+hh/ih*28+ww/iw*18;
+     proposals.push({score,quad:[[L.x,top],[R.x,top],[R.x,bottom],[L.x,bottom]],
+       quality:Math.min(L.a.value,R.a.value,t.value),rect:[L.x,top,R.x,bottom]});
+    }
+   }
+  }
+  proposals.sort((a,b)=>b.score-a.score);
+  const first=proposals[0];
+  if(first&&first.quality>=12){
+   self.postMessage({id,epoch,mode,best:first.rect,quad:first.quad,
+    quality:first.quality,stable:true,method:'foreground-open-frame'});
+   return;
+  }
   // Detect long jambs first. Interior windows, furniture and second-room doors
   // may be stronger locally but should lose to the complete foreground frame.
   const candidates=[];
