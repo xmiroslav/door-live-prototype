@@ -1,0 +1,120 @@
+{
+  "schema_version": 1,
+  "purpose": "Doorframe geometry baseline; annotations are provisional, not ML training ground truth.",
+  "samples": [
+    {
+      "image": "IMG_9457.jpeg",
+      "dimensions": [
+        864,
+        1536
+      ],
+      "state": "open_wide",
+      "coordinate_system": "normalized_0_1",
+      "corners_order": "top_left,top_right,bottom_right,bottom_left",
+      "opening_corners": [
+        [
+          0.157,
+          0.132
+        ],
+        [
+          0.735,
+          0.173
+        ],
+        [
+          0.708,
+          0.9
+        ],
+        [
+          0.161,
+          0.883
+        ]
+      ],
+      "occluded_corner_indices": [
+        1,
+        2
+      ],
+      "annotation_quality": "approximate_manual_not_ground_truth",
+      "edge_presence_13px": [
+        0.562,
+        0,
+        0.988,
+        0.938
+      ]
+    },
+    {
+      "image": "IMG_9458.jpeg",
+      "dimensions": [
+        864,
+        1536
+      ],
+      "state": "open_partial",
+      "coordinate_system": "normalized_0_1",
+      "corners_order": "top_left,top_right,bottom_right,bottom_left",
+      "opening_corners": [
+        [
+          0.159,
+          0.123
+        ],
+        [
+          0.737,
+          0.18
+        ],
+        [
+          0.69,
+          0.893
+        ],
+        [
+          0.164,
+          0.912
+        ]
+      ],
+      "occluded_corner_indices": [
+        1,
+        2
+      ],
+      "annotation_quality": "approximate_manual_not_ground_truth",
+      "edge_presence_13px": [
+        0.738,
+        0,
+        1,
+        0.725
+      ]
+    },
+    {
+      "image": "IMG_9459.jpeg",
+      "dimensions": [
+        864,
+        1536
+      ],
+      "state": "closed",
+      "coordinate_system": "normalized_0_1",
+      "corners_order": "top_left,top_right,bottom_right,bottom_left",
+      "opening_corners": [
+        [
+          0.164,
+          0.102
+        ],
+        [
+          0.843,
+          0.112
+        ],
+        [
+          0.809,
+          0.908
+        ],
+        [
+          0.19,
+          0.903
+        ]
+      ],
+      "occluded_corner_indices": [],
+      "annotation_quality": "approximate_manual_not_ground_truth",
+      "edge_presence_13px": [
+        1,
+        0.463,
+        1,
+        0.738
+      ]
+    }
+  ]
+}
