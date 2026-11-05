@@ -153,7 +153,7 @@ function plausibleDoorAnchor(p){
   // A door including its frame must occupy a substantial vertical span.
   // Reject attractive but incomplete rectangles inside the actual opening.
   const imageHeight=bottomBound-topBound;
-  if(height<imageHeight*.56||bottom<topBound+imageHeight*.70)return false;
+  if(height<imageHeight*.34||bottom<topBound+imageHeight*.53)return false;
  }
  return true;
 }
@@ -257,7 +257,7 @@ function gradients(gray){
 let detectorWorker=null,detectorPending=false,detectorSeq=0,detectorTimeout=0,detectorEpoch=0,detectorMode='';
 function invalidateDetection(){detectorEpoch++;detectorPending=false;clearTimeout(detectorTimeout);detectorSeq++;}
 try{
- detectorWorker=new Worker(new URL('./door-detector-worker.js?v=7',location.href));
+ detectorWorker=new Worker(new URL('./door-detector-worker.js?v=8',location.href));
  detectorWorker.onmessage=e=>{
   detectorPending=false;clearTimeout(detectorTimeout);
   const result=e.data;if(!result||result.id!==detectorSeq||result.epoch!==detectorEpoch||result.mode!==(photo?'photo':'live')||found||editCorners||markOpening||(!photo&&!stream))return;
