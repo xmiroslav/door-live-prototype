@@ -205,11 +205,11 @@ function patchScore(a,b,x,y,dx,dy){
 let cvReady=false,cvLast=null,cvCorners=null,cvFeatures=null,cvBusy=false;
 const cvScript=document.createElement('script');
 cvScript.async=true;cvScript.src='https://docs.opencv.org/4.x/opencv.js';
-cvScript.onload=()=>{let checks=0;const wait=()=>{if(window.cv&&cv.Mat&&cv.calcOpticalFlowPyrLK&&cv.findHomography){cvReady=true;if(tracking&&previous)seedCV(previous)}else if(++checks<100)setTimeout(wait,300);else console.warn('OpenCV initialization timed out')};wait()};
+cvScript.onload=()=>{let checks=0;const wait=()=>{if(window.cv&&cv.Mat&&cv.calcOpticalFlowPyrLK&&cv.findHomography){cvReady=true;resetWorkerTracking();if(tracking&&previous)seedCV(previous)}else if(++checks<100)setTimeout(wait,300);else console.warn('OpenCV initialization timed out')};wait()};
 cvScript.onerror=()=>{console.warn('OpenCV.js unavailable; using fallback tracker')};
 // Full OpenCV WASM is intentionally opt-in: automatic loading stalls some iOS browsers.
 document.head.appendChild(cvScript);
-function resetCV(){if(cvLast)cvLast.delete();if(cvCorners)cvCorners.delete();if(cvFeatures)cvFeatures.delete();cvLast=cvCorners=cvFeatures=null}
+function resetCV(){resetWorkerTracking();if(cvLast)cvLast.delete();if(cvCorners)cvCorners.delete();if(cvFeatures)cvFeatures.delete();cvLast=cvCorners=cvFeatures=null}
 function cvFrame(gray){const m=new cv.Mat(probe.height,probe.width,cv.CV_8UC1);m.data.set(gray);return m}
 function seedCV(gray){
  if(!cvReady||!points)return false;
@@ -282,76 +282,56 @@ function trackCV(gray){
  }catch(e){console.warn('OpenCV tracking error',e);lostFrames++;return false}
  finally{for(const m of [current,next,status,errors,back,backStatus,backErrors,H,src,dst,inlierMask])if(m)m.delete();cvBusy=false}
 }
+// Worker-based fallback tracking avoids blocking pointer input and rendering.
+// OpenCV remains the preferred tracker when it initializes successfully.
+let trackerWorker=null,trackerPending=false,trackerSeq=0,trackerSession=0,trackerTimer=0;
+function resetWorkerTracking(){
+ trackerSession++;trackerPending=false;clearTimeout(trackerTimer);
+ if(trackerWorker){trackerWorker.terminate();trackerWorker=null}
+}
+function ensureTrackerWorker(){
+ if(trackerWorker)return true;
+ try{
+  trackerWorker=new Worker(new URL('./door-tracker-worker.js',location.href));
+  trackerWorker.onmessage=e=>{
+   const r=e.data;
+   if(!r||r.session!==trackerSession||r.id!==trackerSeq)return;
+   trackerPending=false;clearTimeout(trackerTimer);
+   if(!tracking||!stream||photo||editCorners||drag>=0)return;
+   if(r.ready)return;
+   if(!r.ok){lostFrames++;if(lostFrames>=5)loseTracking();return}
+   const sx=canvas.width/probe.width,sy=canvas.height/probe.height;
+   const projected=r.proposed.map(p=>[p[0]*sx,p[1]*sy]);
+   if(!validDoorQuad(projected)||projected.some((p,i)=>Math.hypot(p[0]-points[i][0],p[1]-points[i][1])>canvas.width*.16)){
+    lostFrames++;if(lostFrames>=5)loseTracking();return;
+   }
+   const alpha=r.confidence>.8?.8:.65;
+   points=points.map((p,i)=>[p[0]*(1-alpha)+projected[i][0]*alpha,p[1]*(1-alpha)+projected[i][1]*alpha]);
+   lostFrames=0;hint.textContent='מעקב פעיל · ניתן להתאים פינות';draw();
+  };
+  trackerWorker.onerror=e=>{console.warn('Tracker worker failed',e.message);resetWorkerTracking();loseTracking()};
+  return true;
+ }catch(e){console.warn('Tracker worker unavailable',e);return false}
+}
+function loseTracking(){
+ tracking=false;found=false;previous=null;resetCV();resetWorkerTracking();
+ autoSearch=!manualLock;autoCandidate=null;autoCandidateCount=0;lastSearch=0;
+ hint.textContent='המעקב אבד · כוונו שוב לפתח או סמנו ידנית';draw();
+}
 function updateTracking(){
  if(!tracking||photo||!stream||drag>=0||editCorners)return;
+ if(trackerPending)return;
  const current=captureGray();if(!current)return;
- if(cvReady){if(trackCV(current)){previous=current;return}if(lostFrames>=6){tracking=false;found=false;resetCV();autoSearch=!manualLock;autoCandidate=null;autoCandidateCount=0;lastSearch=0;hint.textContent='המעקב אבד · כוונו שוב לפתח או סמנו ידנית';draw();return}previous=current;return}
- if(!previous){previous=current;return}
- const w=probe.width,h=probe.height,sx=canvas.width/w,sy=canvas.height/h;
- const p=points.map(q=>[q[0]/sx,q[1]/sy]);
- // Use dense frame-adjacent features; corner pixels alone are often blank.
- const anchors=[];
- for(let edge=0;edge<4;edge++){
-  const a=p[edge],b=p[(edge+1)%4];
-  for(let j=1;j<=7;j++){
-   const t=j/8,x=a[0]+(b[0]-a[0])*t,y=a[1]+(b[1]-a[1])*t;
-   for(const offset of [-7,7,14]){
-    const nx=-(b[1]-a[1]),ny=b[0]-a[0],len=Math.hypot(nx,ny)||1;
-    anchors.push([x+offset*nx/len,y+offset*ny/len]);
-   }
-  }
+ if(cvReady){
+  if(trackCV(current)){previous=current;return}
+  if(lostFrames>=5)loseTracking();
+  previous=current;return;
  }
- const matches=[];
- for(const [x0,y0] of anchors){
-  const x=Math.round(x0),y=Math.round(y0);if(x<20||x>w-20||y<20||y>h-20)continue;
-  let texture=0;
-  for(let oy=-5;oy<=5;oy+=2)for(let ox=-5;ox<=5;ox+=2){
-   const k=(y+oy)*w+x+ox;
-   texture+=Math.abs(previous[k+2]-previous[k-2])+Math.abs(previous[k+2*w]-previous[k-2*w]);
-  }
-  if(texture<220)continue;
-  let best=Infinity,dxBest=0,dyBest=0,second=Infinity;
-  for(let dy=-12;dy<=12;dy+=3)for(let dx=-12;dx<=12;dx+=3){
-   const v=patchScore(previous,current,x,y,dx,dy);
-   if(v<best){second=best;best=v;dxBest=dx;dyBest=dy}else if(v<second)second=v;
-  }
-  const coarseX=dxBest,coarseY=dyBest;
-  for(let dy=coarseY-2;dy<=coarseY+2;dy++)for(let dx=coarseX-2;dx<=coarseX+2;dx++){
-   const v=patchScore(previous,current,x,y,dx,dy);
-   if(v<best){best=v;dxBest=dx;dyBest=dy}
-  }
-  if(best<20)matches.push({x:x0,y:y0,dx:dxBest,dy:dyBest,error:best});
- }
- const median=arr=>{const a=arr.slice().sort((x,y)=>x-y);return a[Math.floor(a.length/2)]};
- if(matches.length>=12){
-  const mx=median(matches.map(m=>m.dx)),my=median(matches.map(m=>m.dy));
-  const inliers=matches.filter(m=>Math.hypot(m.dx-mx,m.dy-my)<4.5);
-  if(inliers.length>=10&&inliers.length/matches.length>=.55){
-   const cx=inliers.reduce((a,m)=>a+m.x,0)/inliers.length,cy=inliers.reduce((a,m)=>a+m.y,0)/inliers.length;
-   const nx=inliers.reduce((a,m)=>a+m.x+m.dx,0)/inliers.length,ny=inliers.reduce((a,m)=>a+m.y+m.dy,0)/inliers.length;
-   let denom=0,real=0,imag=0;
-   for(const m of inliers){
-    const x=m.x-cx,y=m.y-cy,X=m.x+m.dx-nx,Y=m.y+m.dy-ny;
-    denom+=x*x+y*y;real+=x*X+y*Y;imag+=x*Y-y*X;
-   }
-   const scale=Math.hypot(real,imag)/Math.max(1,denom),angle=Math.atan2(imag,real);
-   if(scale>.95&&scale<1.05&&Math.abs(angle)<.07&&Math.hypot(nx-cx,ny-cy)<18){
-    const co=Math.cos(angle)*scale,si=Math.sin(angle)*scale;
-    const proposed=p.map(q=>{const x=q[0]-cx,y=q[1]-cy;return[nx+co*x-si*y,ny+si*x+co*y]});
-    points=points.map((q,i)=>[
-     Math.max(0,Math.min(canvas.width,q[0]*.35+proposed[i][0]*sx*.65)),
-     Math.max(0,Math.min(canvas.height,q[1]*.35+proposed[i][1]*sy*.65))
-    ]);
-    lostFrames=0;
-    hint.textContent='מעקב פעיל · בדקו את מיקום הדלת';
-   }else lostFrames++;
-  }else lostFrames++;
- }else lostFrames++;
- if(lostFrames>=8){
-  tracking=false;found=false;previous=null;autoSearch=!manualLock;autoCandidate=null;autoCandidateCount=0;lastSearch=0;
-  hint.textContent='המעקב אבד · מחפשים מחדש או לחצו על סימון ידני';
- }else previous=current;
- draw();
+ if(!ensureTrackerWorker()){loseTracking();return}
+ trackerPending=true;const id=++trackerSeq,session=trackerSession;
+ const quad=points.map(p=>[p[0]*probe.width/canvas.width,p[1]*probe.height/canvas.height]);
+ trackerTimer=setTimeout(()=>{if(trackerPending&&session===trackerSession&&id===trackerSeq){loseTracking()}},2500);
+ trackerWorker.postMessage({id,session,buffer:current.buffer,w:probe.width,h:probe.height,quad},[current.buffer]);
 }
 document.getElementById('mark').onclick=()=>{invalidateDetection();markOpening=true;manualCorners=[];editCorners=false;hideGuides=true;document.getElementById('adjust').classList.remove('active');hint.textContent='סמנו 4 פינות: שמאל למעלה, ימין למעלה, ימין למטה, שמאל למטה';draw()};
 document.getElementById('adjust').onclick=()=>{if(!found){hint.textContent='יש לזהות פתח תחילה · לחצו על סימון ידני';return}editCorners=!editCorners;hideGuides=!editCorners;markOpening=false;document.getElementById('adjust').classList.toggle('active',editCorners);if(!editCorners&&stream&&!photo){resetCV();previous=captureGray();tracking=true;lostFrames=0;if(cvReady&&previous)seedCV(previous)}else if(editCorners){tracking=false;resetCV()}hint.textContent=editCorners?'גררו את ארבע הפינות למשקוף ולחצו שוב לסיום':'ההתאמה נשמרה · מעקב פעיל';draw()};
