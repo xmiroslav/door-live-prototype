@@ -29,7 +29,50 @@ self.onmessage=e=>{
    }
   }
  }
+
+ // Fit two independent jamb lines and the lintel to local image gradients.
+ // This permits slanted sides and a sloped top in oblique photographs.
+ const edgeX=(x,y)=>{x=Math.round(x);y=Math.round(y);if(x<3||x>=w-3||y<3||y>=h-3)return 0;return Math.abs(gray[y*w+x+2]-gray[y*w+x-2])};
+ const edgeY=(x,y)=>{x=Math.round(x);y=Math.round(y);if(x<3||x>=w-3||y<3||y>=h-3)return 0;return Math.abs(gray[(y+2)*w+x]-gray[(y-2)*w+x])};
+ const fitSide=(x0,y0,y1)=>{
+  let optimum=null;
+  for(let shift=-12;shift<=12;shift+=3)for(let tilt=-.22;tilt<=.22;tilt+=.035){
+   let sum=0,valid=0;
+   for(let j=1;j<=14;j++){const t=j/15,y=y0+(y1-y0)*t,x=x0+shift+tilt*(y-(y0+y1)/2);const v=edgeX(x,y);sum+=Math.min(v,100);if(v>12)valid++}
+   const value=sum/14+valid*1.8-Math.abs(shift)*.5-Math.abs(tilt)*12;
+   if(!optimum||value>optimum.value)optimum={x:x0+shift,tilt,value,valid};
+  }
+  return optimum;
+ };
+ const fitTop=(y0,x0,x1)=>{
+  let optimum=null;
+  for(let shift=-10;shift<=10;shift+=2)for(let tilt=-.18;tilt<=.18;tilt+=.03){
+   let sum=0,valid=0;
+   for(let j=1;j<=12;j++){const t=j/13,x=x0+(x1-x0)*t,y=y0+shift+tilt*(x-(x0+x1)/2);const v=edgeY(x,y);sum+=Math.min(v,100);if(v>12)valid++}
+   const value=sum/12+valid*1.8-Math.abs(shift)*.6-Math.abs(tilt)*12;
+   if(!optimum||value>optimum.value)optimum={y:y0+shift,tilt,value,valid};
+  }
+  return optimum;
+ };
+ const refineQuad=rect=>{
+  const [l,t,r,b]=rect,left=fitSide(l,t,b),right=fitSide(r,t,b),top=fitTop(t,l,r);
+  if(!left||!right||!top||left.valid<5||right.valid<5||top.valid<4)return null;
+  const midY=(t+b)/2,midX=(l+r)/2;
+  const intersection=side=>{
+   const slope=side.tilt,k=top.tilt;
+   const y=(top.y+k*(side.x-midX)+k*slope*midY)/(1-k*slope);
+   const x=side.x+slope*(y-midY);
+   return [x,y];
+  };
+  const tl=intersection(left),tr=intersection(right);
+  const bl=[left.x+left.tilt*(b-midY),b],br=[right.x+right.tilt*(b-midY),b];
+  const quad=[tl,tr,br,bl];
+  const cross=(a,b,c)=>(b[0]-a[0])*(c[1]-b[1])-(b[1]-a[1])*(c[0]-b[0]);
+  if(quad.some(p=>!p.every(Number.isFinite))||quad[1][0]-quad[0][0]<25||quad[2][0]-quad[3][0]<20)return null;
+  if(!quad.every((p,i)=>cross(p,quad[(i+1)%4],quad[(i+2)%4])>0))return null;
+  return quad;
+ };
  if(!best||quality<(target?10:17)){last=null;streak=0;self.postMessage({id,epoch,mode,best:null,quality});return}
  if(last&&Math.hypot(...best.map((x,i)=>x-last[i]))<18)streak++;else streak=1;
- last=best;self.postMessage({id,epoch,mode,best,quality,stable:!!still||streak>=3});
+ last=best;const quad=refineQuad(best);self.postMessage({id,epoch,mode,best,quad,quality,stable:!!still||streak>=3});
 };
