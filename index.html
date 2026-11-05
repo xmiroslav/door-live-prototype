@@ -426,12 +426,12 @@ function updateTracking(){
  if(!tracking||photo||!stream||drag>=0||editCorners||markOpening)return;
  if(trackerPending)return;
  const current=captureGray();if(!current)return;
- if(cvReady){
+ if(cvReady&&!ensureTrackerWorker()){
   if(trackCV(current)){previous=current;return}
   if(lostFrames>=5)loseTracking();
   previous=current;return;
  }
- if(!ensureTrackerWorker()){loseTracking();return}
+ if(!ensureTrackerWorker()){hint.textContent='מעקב אינו זמין · ניתן להתאים את הפינות ידנית';loseTracking();return}
  trackerPending=true;const id=++trackerSeq,session=trackerSession;
  const quad=points.map(p=>[p[0]*probe.width/canvas.width,p[1]*probe.height/canvas.height]);
  trackerTimer=setTimeout(()=>{if(trackerPending&&session===trackerSession&&id===trackerSeq){loseTracking()}},2500);
