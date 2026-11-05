@@ -297,7 +297,7 @@ function ensureTrackerWorker(){
    const r=e.data;
    if(!r||r.session!==trackerSession||r.id!==trackerSeq)return;
    trackerPending=false;clearTimeout(trackerTimer);
-   if(!tracking||!stream||photo||editCorners||drag>=0)return;
+   if(!tracking||!stream||photo||editCorners||markOpening||drag>=0)return;
    if(r.ready)return;
    if(!r.ok){lostFrames++;if(lostFrames>=5)loseTracking();return}
    const sx=canvas.width/probe.width,sy=canvas.height/probe.height;
@@ -319,7 +319,7 @@ function loseTracking(){
  hint.textContent='המעקב אבד · כוונו שוב לפתח או סמנו ידנית';draw();
 }
 function updateTracking(){
- if(!tracking||photo||!stream||drag>=0||editCorners)return;
+ if(!tracking||photo||!stream||drag>=0||editCorners||markOpening)return;
  if(trackerPending)return;
  const current=captureGray();if(!current)return;
  if(cvReady){
@@ -333,7 +333,7 @@ function updateTracking(){
  trackerTimer=setTimeout(()=>{if(trackerPending&&session===trackerSession&&id===trackerSeq){loseTracking()}},2500);
  trackerWorker.postMessage({id,session,buffer:current.buffer,w:probe.width,h:probe.height,quad},[current.buffer]);
 }
-document.getElementById('mark').onclick=()=>{invalidateDetection();markOpening=true;manualCorners=[];editCorners=false;hideGuides=true;document.getElementById('adjust').classList.remove('active');hint.textContent='סמנו 4 פינות: שמאל למעלה, ימין למעלה, ימין למטה, שמאל למטה';draw()};
+document.getElementById('mark').onclick=()=>{invalidateDetection();resetCV();tracking=false;markOpening=true;manualCorners=[];editCorners=false;hideGuides=true;document.getElementById('adjust').classList.remove('active');hint.textContent='סמנו 4 פינות: שמאל למעלה, ימין למעלה, ימין למטה, שמאל למטה';draw()};
 document.getElementById('adjust').onclick=()=>{if(!found){hint.textContent='יש לזהות פתח תחילה · לחצו על סימון ידני';return}editCorners=!editCorners;hideGuides=!editCorners;markOpening=false;document.getElementById('adjust').classList.toggle('active',editCorners);if(!editCorners&&stream&&!photo){resetCV();previous=captureGray();tracking=true;lostFrames=0;if(cvReady&&previous)seedCV(previous)}else if(editCorners){tracking=false;resetCV()}hint.textContent=editCorners?'גררו את ארבע הפינות למשקוף ולחצו שוב לסיום':'ההתאמה נשמרה · מעקב פעיל';draw()};
 autoBtn.onclick=()=>{invalidateDetection();if(photo){found=false;findOpeningPhoto();return}resetCV();tracking=false;found=false;manualLock=false;selectedByTap=false;targetCenter=null;autoSearch=true;autoCandidate=null;autoCandidateCount=0;previous=null;lastSearch=0;editCorners=false;hideGuides=true;markOpening=false;searchFailures=0,manualCorners=[];hint.textContent='מחפשים פתח דלת אוטומטית…';draw()};
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&stream){resetCV();stream.getTracks().forEach(t=>t.stop());stream=null;video.srcObject=null;hint.textContent='המצלמה נעצרה · הפעילו אותה מחדש'}});const originalCamera=document.getElementById('start').onclick;
@@ -342,6 +342,6 @@ document.getElementById('start').onclick=async()=>{invalidateDetection();resetCV
 
 canvas.addEventListener('pointerup',()=>{if(wasDragging){wasDragging=false;return}if(!found||!editCorners)return;manualLock=true;tracking=false;previous=null;lostFrames=0});
 let processing=false;
-setInterval(()=>{if(!stream||photo||drag>=0||manualAdjusting||editCorners||document.hidden||processing)return;processing=true;try{if(tracking)updateTracking();else if(autoSearch&&!found&&Date.now()-lastSearch>1700){lastSearch=Date.now();detectOpeningAsync()}}catch(e){console.error('Tracking failed',e);tracking=false;hint.textContent='שגיאת מעקב · געו שוב בפתח'}finally{processing=false}},300);
+setInterval(()=>{if(!stream||photo||drag>=0||manualAdjusting||editCorners||markOpening||document.hidden||processing)return;processing=true;try{if(tracking)updateTracking();else if(autoSearch&&!found&&Date.now()-lastSearch>1700){lastSearch=Date.now();detectOpeningAsync()}}catch(e){console.error('Tracking failed',e);tracking=false;hint.textContent='שגיאת מעקב · געו שוב בפתח'}finally{processing=false}},300);
 
 </script></body></html>
