@@ -378,9 +378,14 @@ function ensureTrackerWorker(){
    if(!acceptTrackedQuad(captureGray(),projected)||projected.some((p,i)=>Math.hypot(p[0]-points[i][0],p[1]-points[i][1])>canvas.width*.12)){
     lostFrames++;if(lostFrames>=5)loseTracking();return;
    }
-   const alpha=r.confidence>.8?.8:.65;
+   // Smooth only when the proposed motion is small; large camera movements
+   // should not be lagged behind by a low-pass filter.
+   const movement=Math.max(...projected.map((p,i)=>Math.hypot(p[0]-points[i][0],p[1]-points[i][1])));
+   const alpha=movement>canvas.width*.025?.96:r.confidence>.8?.88:.72;
    points=points.map((p,i)=>[p[0]*(1-alpha)+projected[i][0]*alpha,p[1]*(1-alpha)+projected[i][1]*alpha]);
-   trackingConfidence=r.confidence;lostFrames=0;hint.textContent='מעקב תמונה · בדיקת משקוף פעילה';draw();
+   trackingConfidence=r.confidence;lostFrames=0;
+   hint.textContent=r.model==='homography'?'מעקב פרספקטיבה · בדיקת משקוף פעילה':'מעקב תנועה · בדיקת משקוף פעילה';
+   draw();
   };
   trackerWorker.onerror=e=>{console.warn('Tracker worker failed',e.message);resetWorkerTracking();loseTracking()};
   return true;
