@@ -3,7 +3,7 @@
    The door is captured only when the customer clicks the button.
    Keep all layers and pseudo-elements in #bigdoor. */
 (function () {
-  const VIEWER = 'https://xmiroslav.github.io/door-live-prototype/?v=38&return=' + encodeURIComponent(window.location.href);
+  const VIEWER = 'https://xmiroslav.github.io/door-live-prototype/?v=53&return=' + encodeURIComponent(window.location.href);
   const SCRIPT = 'https://cdn.jsdelivr.net/npm/html-to-image@1.11.13/dist/html-to-image.js';
   let loading;
   const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -76,16 +76,15 @@
   }
   function init() {
     if (document.getElementById('unidoors-ar-preview')) { syncVisibility(); return; }
-    const target = document.querySelector('.resultdoor') || document.querySelector('.greydoorplace.parentgrid1') || document.getElementById('bigdoor')?.parentElement;
-    if (!target || !document.getElementById('bigdoor')) return;
+    if (!document.getElementById('bigdoor')) return;
     const button = document.createElement('button');
     button.id = 'unidoors-ar-preview';
     button.type = 'button';
     button.textContent = 'הצג את הדלת בבית שלי';
     button.hidden = true;
-    button.style.cssText = 'display:none;margin:12px auto;padding:13px 22px;border:0;border-radius:30px;background:#CD8080;color:#fff;font:600 16px Arial;cursor:pointer';
+    button.style.cssText = 'display:none;position:fixed;right:max(16px,env(safe-area-inset-right));bottom:calc(20px + env(safe-area-inset-bottom));z-index:2147483000;max-width:calc(100vw - 32px);padding:15px 22px;border:0;border-radius:30px;background:#CD8080;color:#fff;font:600 16px Arial;line-height:1.3;box-shadow:0 8px 26px rgba(0,0,0,.24);cursor:pointer;touch-action:manipulation;direction:rtl';
     button.addEventListener('click', preview);
-    target.appendChild(button);
+    document.body.appendChild(button);
     syncVisibility();
   }
   mobileQuery.addEventListener?.('change', syncVisibility);
