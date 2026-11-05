@@ -68,7 +68,7 @@ function findOpeningPhoto(){
  // Reuse the detector, but only accept a stable still-image proposal after
  // three identical passes; show editable corners for user verification.
  autoCandidate=null;autoCandidateCount=0;
- for(let i=0;i<3&&!found;i++)findOpening();
+ if(detectorWorker){detectOpeningAsync();return}for(let i=0;i<3&&!found;i++)findOpening();
  if(found){
   tracking=false;previous=null;resetCV();editCorners=true;hideGuides=false;
   document.getElementById('adjust').classList.add('active');
@@ -106,6 +106,38 @@ function gradients(gray){
  for(let i=2;i<w-2;i++)vertical[i]=(vertical[i-2]+2*vertical[i-1]+3*vertical[i]+2*vertical[i+1]+vertical[i+2])/9;
  for(let i=2;i<h-2;i++)horizontal[i]=(horizontal[i-2]+2*horizontal[i-1]+3*horizontal[i]+2*horizontal[i+1]+horizontal[i+2])/9;
  return {vertical,horizontal};
+}
+// Detector runs off the UI thread; the existing synchronous implementation
+// remains as a fallback if workers are blocked by browser or deployment settings.
+let detectorWorker=null,detectorPending=false,detectorSeq=0,detectorTimeout=0;
+try{
+ detectorWorker=new Worker(new URL('./door-detector-worker.js',location.href));
+ detectorWorker.onmessage=e=>{
+  detectorPending=false;clearTimeout(detectorTimeout);
+  const result=e.data;if(!result||result.id!==detectorSeq||found||editCorners||markOpening||(!photo&&!stream))return;
+  if(!result.best){searchFailures++;hint.textContent='לא זוהה פתח · אפשר לבחור סימון ידני';return}
+  if(!result.stable){hint.textContent='זוהה פתח אפשרי · מאמתים…';return}
+  const [l,t,r,b]=result.best,sx=canvas.width/probe.width,sy=canvas.height/probe.height;
+  const candidate=[[l*sx,t*sy],[r*sx,t*sy],[r*sx,b*sy],[l*sx,b*sy]];
+  if(!validDoorQuad(candidate))return;
+  points=candidate;found=true;autoSearch=false;manualLock=false;tracking=!!stream&&!photo;
+  previous=tracking?captureGray():null;lostFrames=0;
+  if(tracking&&cvReady&&previous)seedCV(previous);
+  if(photo){tracking=false;editCorners=true;hideGuides=false;document.getElementById('adjust').classList.add('active')}
+  else{editCorners=false;hideGuides=true}
+  hint.textContent=photo?'זוהה פתח אפשרי · בדקו והתאימו את הפינות':'הדלת מוצגת · לתיקון לחצו על התאמת פינות';
+  draw();
+ };
+ detectorWorker.onerror=e=>{console.warn('Door detector worker unavailable',e.message);detectorWorker.terminate();detectorWorker=null;detectorPending=false;clearTimeout(detectorTimeout)};
+}catch(e){console.warn('Worker disabled',e)}
+function detectOpeningAsync(){
+ if(!detectorWorker){findOpening();return}
+ if(detectorPending||found||editCorners||markOpening)return;
+ const gray=captureGray();if(!gray)return;
+ detectorPending=true;const id=++detectorSeq;
+ detectorTimeout=setTimeout(()=>{if(detectorPending&&id===detectorSeq){detectorPending=false;detectorWorker?.terminate();detectorWorker=null;hint.textContent='מצב חיפוש חלופי פעיל'}},4500);
+ const target=targetCenter?targetCenter.slice():null;
+ detectorWorker.postMessage({id,w:probe.width,h:probe.height,buffer:gray.buffer,target},[gray.buffer]);
 }
 function findOpening(){
  const gray=captureGray();if(!gray){hint.textContent='יש להפעיל מצלמה תחילה';return;}
@@ -329,6 +361,6 @@ document.getElementById('start').onclick=async()=>{resetCV();await originalCamer
 
 canvas.addEventListener('pointerup',()=>{if(wasDragging){wasDragging=false;return}if(!found||!editCorners)return;manualLock=true;tracking=false;previous=null;lostFrames=0});
 let processing=false;
-setInterval(()=>{if(!stream||photo||drag>=0||manualAdjusting||editCorners||document.hidden||processing)return;processing=true;try{if(tracking)updateTracking();else if(autoSearch&&!found&&Date.now()-lastSearch>1700){lastSearch=Date.now();findOpening()}}catch(e){console.error('Tracking failed',e);tracking=false;hint.textContent='שגיאת מעקב · געו שוב בפתח'}finally{processing=false}},300);
+setInterval(()=>{if(!stream||photo||drag>=0||manualAdjusting||editCorners||document.hidden||processing)return;processing=true;try{if(tracking)updateTracking();else if(autoSearch&&!found&&Date.now()-lastSearch>1700){lastSearch=Date.now();detectOpeningAsync()}}catch(e){console.error('Tracking failed',e);tracking=false;hint.textContent='שגיאת מעקב · געו שוב בפתח'}finally{processing=false}},300);
 
 </script></body></html>
