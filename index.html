@@ -203,7 +203,7 @@ function detectOpeningAsync(){
  if(detectorPending||found||editCorners||markOpening)return;
  const gray=captureGray();if(!gray){setBusy(null);return}
  detectorPending=true;const id=++detectorSeq,epoch=detectorEpoch,mode=photo?'photo':'live';
- detectorTimeout=setTimeout(()=>{if(detectorPending&&id===detectorSeq&&epoch===detectorEpoch){detectorPending=false;detectorWorker?.terminate();detectorWorker=null;hint.textContent='מצב חיפוש חלופי פעיל';if(photo&&!found)findOpeningPhoto()}},4500);
+ detectorTimeout=setTimeout(()=>{if(detectorPending&&id===detectorSeq&&epoch===detectorEpoch){detectorPending=false;detectorWorker?.terminate();detectorWorker=null;hint.textContent='מצב חיפוש חלופי פעיל';if(photo&&!found)findOpeningPhoto()}},photo?14000:4500);
  const target=targetCenter?targetCenter.slice():null;
  detectorWorker.postMessage({id,epoch,mode,w:probe.width,h:probe.height,buffer:gray.buffer,target,still:!!photo},[gray.buffer]);
 }
