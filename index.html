@@ -61,25 +61,27 @@ window.addEventListener('message',e=>{if(!['https://www.unidoors.co.il','https:/
  };
  im.onerror=()=>{hint.textContent='לא ניתן לטעון את תמונת הדלת'};im.src=e.data.image});const palette=[['אפור כהה','#394650'],['לבן','#e9e5da'],['עץ','#946542'],['שחור','#15191c'],['כחול','#244b75']];function initPoints(){const w=canvas.width,h=canvas.height;points=[[w*.26,h*.14],[w*.74,h*.14],[w*.74,h*.87],[w*.26,h*.87]]}function resize(){const r=stage.getBoundingClientRect(),old=points;const ratio=Math.min(window.devicePixelRatio||1,1.5);canvas.width=Math.round(r.width*ratio);canvas.height=Math.round(r.height*ratio);if(old){const sx=canvas.width/(resize.oldW||canvas.width),sy=canvas.height/(resize.oldH||canvas.height);points=old.map(p=>[p[0]*sx,p[1]*sy])}else initPoints();resize.oldW=canvas.width;resize.oldH=canvas.height;draw()}window.addEventListener('resize',resize);
 function trimDoorImage(image){
- const c=document.createElement('canvas');c.width=image.naturalWidth;c.height=image.naturalHeight;
+ // Preserve all visible configurator pixels, including translucent glass and
+ // anti-aliased decoration. Do not force alpha to 255 or trim the frame tightly.
+ const w=image.naturalWidth,h=image.naturalHeight;
+ const c=document.createElement('canvas');c.width=w;c.height=h;
  const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(image,0,0);
- let data;try{data=x.getImageData(0,0,c.width,c.height).data}catch(e){return image}
- let left=c.width,top=c.height,right=-1,bottom=-1;
- for(let y=0;y<c.height;y+=2)for(let xx=0;xx<c.width;xx+=2){const i=(y*c.width+xx)*4;if(data[i+3]>3){left=Math.min(left,xx);right=Math.max(right,xx);top=Math.min(top,y);bottom=Math.max(bottom,y)}}
- if(right<left||bottom<top)return image;
- const pad=5;left=Math.max(0,left-pad);top=Math.max(0,top-pad);right=Math.min(c.width-1,right+pad);bottom=Math.min(c.height-1,bottom+pad);
- // CSS opacity on the configurator can make the whole captured door translucent.
- // Make substantial door pixels opaque, retaining truly transparent cutouts.
- const pixels=x.getImageData(0,0,c.width,c.height);
- for(let i=0;i<pixels.data.length;i+=4){
-  const alpha=pixels.data[i+3];
-  if(alpha>=100) pixels.data[i+3]=255;
+ let data;try{data=x.getImageData(0,0,w,h).data}catch(e){return image}
+ let left=w,top=h,right=-1,bottom=-1;
+ for(let y=0;y<h;y+=2)for(let xx=0;xx<w;xx+=2){
+  const i=(y*w+xx)*4;if(data[i+3]>2){left=Math.min(left,xx);right=Math.max(right,xx);top=Math.min(top,y);bottom=Math.max(bottom,y)}
  }
- x.putImageData(pixels,0,0);
+ if(right<left||bottom<top)return image;
+ // Retain generous padding around the outer frame; only remove transparent
+ // screenshot margins. A tight crop previously clipped top decorations.
+ const padX=Math.max(10,Math.round(w*.025)),padY=Math.max(12,Math.round(h*.025));
+ left=Math.max(0,left-padX);right=Math.min(w-1,right+padX);
+ top=Math.max(0,top-padY);bottom=Math.min(h-1,bottom+padY);
  const out=document.createElement('canvas');out.width=right-left+1;out.height=bottom-top+1;
  out.getContext('2d').drawImage(c,left,top,out.width,out.height,0,0,out.width,out.height);
  return out;
 }
+
 function renderDoor(){if(doorCache)return doorCache;const c=document.createElement('canvas');c.width=420;c.height=840;const x=c.getContext('2d');x.fillStyle=style.color;x.fillRect(0,0,420,840);x.strokeStyle='#0008';x.lineWidth=12;x.strokeRect(9,9,402,822);x.strokeStyle='#ffffff20';x.lineWidth=3;x.strokeRect(29,29,362,782);if(style.window!=='none'){let wx=style.window==='slim'?270:66,wy=style.window==='slim'?65:65,ww=style.window==='slim'?72:288,wh=style.window==='slim'?440:270;x.fillStyle='#7c9ba9';x.fillRect(wx,wy,ww,wh);x.strokeStyle='#12181f';x.lineWidth=16;x.strokeRect(wx,wy,ww,wh);x.strokeStyle='#c7e7ff66';x.lineWidth=6;x.beginPath();x.moveTo(wx+15,wy+wh-20);x.lineTo(wx+ww-18,wy+20);x.stroke()}x.fillStyle=style.handle==='black'?'#111':style.handle==='gold'?'#c3a15a':'#c9d1d6';x.fillRect(315,440,12,98);x.fillRect(270,443,57,12);return doorCache=c}
 function triMap(img,src,dst){const [a,b,c]=src,[d,e,f]=dst;const det=(a[0]*(b[1]-c[1])+b[0]*(c[1]-a[1])+c[0]*(a[1]-b[1]));if(Math.abs(det)<.01)return;const solve=(v)=>[(v[0]*(b[1]-c[1])+v[1]*(c[1]-a[1])+v[2]*(a[1]-b[1]))/det,(v[0]*(c[0]-b[0])+v[1]*(a[0]-c[0])+v[2]*(b[0]-a[0]))/det,(v[0]*(b[0]*c[1]-c[0]*b[1])+v[1]*(c[0]*a[1]-a[0]*c[1])+v[2]*(a[0]*b[1]-b[0]*a[1]))/det];const xx=solve([d[0],e[0],f[0]]),yy=solve([d[1],e[1],f[1]]);ctx.save();ctx.beginPath();ctx.moveTo(...d);ctx.lineTo(...e);ctx.lineTo(...f);ctx.closePath();ctx.clip();ctx.setTransform(xx[0],yy[0],xx[1],yy[1],xx[2],yy[2]);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.drawImage(img,0,0);ctx.restore()}
 
