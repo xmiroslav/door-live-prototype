@@ -237,7 +237,7 @@ function gradients(gray){
 let detectorWorker=null,detectorPending=false,detectorSeq=0,detectorTimeout=0,detectorEpoch=0,detectorMode='';
 function invalidateDetection(){detectorEpoch++;detectorPending=false;clearTimeout(detectorTimeout);detectorSeq++;}
 try{
- detectorWorker=new Worker(new URL('./door-detector-worker.js',location.href));
+ detectorWorker=new Worker(new URL('./door-detector-worker.js?v=7',location.href));
  detectorWorker.onmessage=e=>{
   detectorPending=false;clearTimeout(detectorTimeout);
   const result=e.data;if(!result||result.id!==detectorSeq||result.epoch!==detectorEpoch||result.mode!==(photo?'photo':'live')||found||editCorners||markOpening||(!photo&&!stream))return;
