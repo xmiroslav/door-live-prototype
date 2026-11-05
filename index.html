@@ -96,7 +96,7 @@ function resetCV(){if(cvLast)cvLast.delete();if(cvCorners)cvCorners.delete();if(
 function cvFrame(gray){return cv.matFromArray(probe.height,probe.width,cv.CV_8UC1,Array.from(gray))}
 function seedCV(gray){
  if(!cvReady||!points)return false;
- resetCV();const frame=cvFrame(gray),mask=new cv.Mat.zeros(probe.height,probe.width,cv.CV_8UC1);
+ resetCV();const frame=cvFrame(gray),mask=cv.Mat.zeros(probe.height,probe.width,cv.CV_8UC1);
  const sx=probe.width/canvas.width,sy=probe.height/canvas.height;
  const p=points.map(q=>[q[0]*sx,q[1]*sy]);
  // Seed features along both jambs and the lintel, including nearby texture.
@@ -134,7 +134,7 @@ function trackCV(gray){
   H=cv.findHomography(src,dst,cv.RANSAC,3,inlierMask,1500,.995);
   if(H.empty()){lostFrames++;return false}
   let count=0;for(let i=0;i<inlierMask.rows;i++)count+=inlierMask.data[i]?1:0;
-  if(count<8||count/a.length*2<.55){lostFrames++;return false}
+  if(count<8||count/(a.length/2)<.55){lostFrames++;return false}
   const d=H.data64F.length?H.data64F:H.data32F;
   const sx=probe.width/canvas.width,sy=probe.height/canvas.height;
   const projected=points.map(q=>{
