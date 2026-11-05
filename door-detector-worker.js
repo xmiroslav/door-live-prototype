@@ -66,9 +66,39 @@ self.onmessage=e=>{
    if(score>bottomScore){bottomScore=score;bottom=y}
   }
   if(bottom-best.top<ih*.38){self.postMessage({id,epoch,mode,best:null,quality:0});return}
-  const quad=[[best.l,best.top],[best.r,best.top],[best.r,bottom],[best.l,bottom]];
+  // A real jamb must form a tall, coherent quadrilateral. Estimate the two
+  // visible vertical edges independently to retain oblique perspective.
+  const fitJamb=x0=>{
+   let chosen=null;
+   for(let slope=-.26;slope<=.26;slope+=.025)for(let shift=-8;shift<=8;shift+=2){
+    let score=0,hits=0,n=0;
+    for(let y=best.top+8;y<bottom-8;y+=4){
+     const x=Math.round(x0+shift+slope*(y-(best.top+bottom)/2));
+     if(x<3||x>=w-3)continue;
+     const g=gradX(x,y);score+=Math.min(100,g);hits+=g>12?1:0;n++;
+    }
+    if(n<10)continue;
+    const value=score/n+hits/n*16-Math.abs(shift)*.2-Math.abs(slope)*6;
+    if(!chosen||value>chosen.value)chosen={x:x0+shift,slope,value,hits,n};
+   }
+   return chosen;
+  };
+  const left=fitJamb(best.l),right=fitJamb(best.r);
+  if(!left||!right||left.hits/left.n<.26||right.hits/right.n<.26){
+   self.postMessage({id,epoch,mode,best:null,quality:0});return;
+  }
+  const at=(line,y)=>[line.x+line.slope*(y-(best.top+bottom)/2),y];
+  const quad=[at(left,best.top),at(right,best.top),at(right,bottom),at(left,bottom)];
+  const topW=quad[1][0]-quad[0][0],bottomW=quad[2][0]-quad[3][0];
+  const height=bottom-best.top,aspect=height/Math.max(1,(topW+bottomW)/2);
+  // Do not automatically place a full door in a window or tiny interior rectangle.
+  if(topW<iw*.19||bottomW<iw*.19||Math.min(topW,bottomW)<16||
+     Math.max(topW,bottomW)/Math.min(topW,bottomW)>1.55||
+     aspect<1.35||aspect>3.8||bottomScore<8){
+   self.postMessage({id,epoch,mode,best:null,quality:0});return;
+  }
   self.postMessage({id,epoch,mode,best:[best.l,best.top,best.r,bottom],quad,
-   quality:Math.min(best.side,best.topPeak),stable:true,method:'bounded-photo-frame'});
+   quality:Math.min(best.side,best.topPeak,left.value,right.value),stable:true,method:'jamb-perspective-photo'});
   return;
  }
  const gray=new Uint8Array(buffer),W=w+1,iv=new Float32Array(W*(h+1)),ih=new Float32Array(W*(h+1));
