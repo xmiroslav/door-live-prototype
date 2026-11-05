@@ -194,7 +194,7 @@ function loadRoomPhoto(e){
  const f=e.target.files&&e.target.files[0];if(!f)return;
  setBusy('טוענים את התמונה…');hint.textContent='טוענים תמונה…';const url=URL.createObjectURL(f),im=new Image();
  im.onload=()=>{
-  invalidateDetection();resetWorkerTracking();showPreviewUI();photo=im;probe.width=240;probe.height=Math.max(360,Math.round(240*canvas.height/canvas.width));if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}
+  invalidateDetection();resetWorkerTracking();showPreviewUI();photo=im;probe.width=180;probe.height=Math.max(270,Math.round(180*canvas.height/canvas.width));if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}
   video.srcObject=null;video.style.display='none';resetCV();tracking=false;found=false;
   autoSearch=false;manualLock=false;markOpening=false;manualCorners=[];editCorners=false;hideGuides=true;document.getElementById('adjust').classList.remove('active');
   hint.textContent='מנתחים את צילום החדר…';setBusy('מזהים את מסגרת הדלת…');draw();
@@ -257,7 +257,7 @@ function gradients(gray){
 let detectorWorker=null,detectorPending=false,detectorSeq=0,detectorTimeout=0,detectorEpoch=0,detectorMode='';
 function invalidateDetection(){detectorEpoch++;detectorPending=false;clearTimeout(detectorTimeout);detectorSeq++;}
 try{
- detectorWorker=new Worker(new URL('./door-detector-worker.js?v=8',location.href));
+ detectorWorker=new Worker(new URL('./door-detector-worker.js?v=9',location.href));
  detectorWorker.onmessage=e=>{
   detectorPending=false;clearTimeout(detectorTimeout);
   const result=e.data;if(!result||result.id!==detectorSeq||result.epoch!==detectorEpoch||result.mode!==(photo?'photo':'live')||found||editCorners||markOpening||(!photo&&!stream))return;
@@ -282,7 +282,7 @@ function detectOpeningAsync(){
  if(detectorPending||found||editCorners||markOpening)return;
  const gray=captureGray();if(!gray){setBusy(null);return}
  detectorPending=true;const id=++detectorSeq,epoch=detectorEpoch,mode=photo?'photo':'live';
- detectorTimeout=setTimeout(()=>{if(detectorPending&&id===detectorSeq&&epoch===detectorEpoch){detectorPending=false;detectorWorker?.terminate();detectorWorker=null;setBusy(null);if(photo&&!found){markOpening=true;manualCorners=[];editCorners=false;hideGuides=true;hint.textContent='הזיהוי נמשך זמן רב · סמנו ארבע פינות ידנית';draw()}else hint.textContent='החיפוש מתעכב · ניתן לסמן את הפתח ידנית'}},photo?6000:3000);
+ detectorTimeout=setTimeout(()=>{if(detectorPending&&id===detectorSeq&&epoch===detectorEpoch){detectorPending=false;detectorWorker?.terminate();detectorWorker=null;setBusy(null);if(photo&&!found){markOpening=true;manualCorners=[];editCorners=false;hideGuides=true;hint.textContent='הזיהוי נמשך זמן רב · סמנו ארבע פינות ידנית';draw()}else hint.textContent='החיפוש מתעכב · ניתן לסמן את הפתח ידנית'}},photo?20000:3000);
  const target=targetCenter?targetCenter.slice():null;
  detectorWorker.postMessage({id,epoch,mode,w:probe.width,h:probe.height,buffer:gray.buffer,target,still:!!photo},[gray.buffer]);
 }
