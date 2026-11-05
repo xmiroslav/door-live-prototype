@@ -101,9 +101,11 @@ function plausibleDoorAnchor(p){
  if(!p||p.length!==4)return false;
  const top=(p[0][1]+p[1][1])/2,bottom=(p[2][1]+p[3][1])/2;
  const height=bottom-top,width=(Math.hypot(p[1][0]-p[0][0],p[1][1]-p[0][1])+Math.hypot(p[2][0]-p[3][0],p[2][1]-p[3][1]))/2;
- if(height<canvas.height*.22||height>canvas.height*.96||width<canvas.width*.09)return false;
+ if(height<canvas.height*(photo?.30:.32)||height>canvas.height*.96||width<canvas.width*.09)return false;
+ if(!photo&&(bottom<canvas.height*.55||top>canvas.height*.63))return false;
  if(photo){const sw=photo.naturalWidth,sh=photo.naturalHeight,scale=Math.min(canvas.width/sw,canvas.height/sh),left=(canvas.width-sw*scale)/2,right=left+sw*scale,topBound=(canvas.height-sh*scale)/2,bottomBound=topBound+sh*scale;
   if(p.some(q=>q[0]<left-4||q[0]>right+4||q[1]<topBound-4||q[1]>bottomBound+4))return false;
+  if(bottom<topBound+(bottomBound-topBound)*.56)return false;
  }
  return true;
 }
@@ -435,7 +437,7 @@ function jambEvidence(gray,quad){
  return count?total/count:0;
 }
 function acceptTrackedQuad(gray,quad){
- if(!validDoorQuad(quad))return false;
+ if(!validDoorQuad(quad)||!plausibleDoorAnchor(quad))return false;
  const evidence=jambEvidence(gray,quad);
  // Low-edge surfaces cannot be reliably anchored using this method.
  if(jambReference<9){jambReference=Math.max(jambReference,evidence);return true}
