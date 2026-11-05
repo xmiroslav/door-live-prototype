@@ -3,9 +3,31 @@
    The door is captured only when the customer clicks the button.
    Keep all layers and pseudo-elements in #bigdoor. */
 (function () {
-  const VIEWER = 'https://xmiroslav.github.io/door-live-prototype/?v=21&return=' + encodeURIComponent(window.location.href);
+  const VIEWER = 'https://xmiroslav.github.io/door-live-prototype/?v=34&return=' + encodeURIComponent(window.location.href);
   const SCRIPT = 'https://cdn.jsdelivr.net/npm/html-to-image@1.11.13/dist/html-to-image.js';
   let loading;
+  const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+  async function settleDoor(target) {
+    await document.fonts?.ready;
+    const images = Array.from(target.querySelectorAll('img'));
+    await Promise.all(images.map(img => img.decode ? img.decode().catch(()=>{}) : Promise.resolve()));
+    await new Promise(resolve => requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+  }
+  function captureFilter(node) {
+    return !(node instanceof Element && (node.id==='unidoors-ar-preview'||node.matches('.tambur,.door-color-panel,.floorplace,.alertplace')));
+  }
+  async function captureExactDoor(lib,target) {
+    await settleDoor(target);
+    const options={pixelRatio:3,cacheBust:true,backgroundColor:'transparent',filter:captureFilter,skipAutoScale:false};
+    let result=await lib.toPng(target,options);
+    const probe=new Image();probe.src=result;await probe.decode();
+    const check=document.createElement('canvas');check.width=probe.naturalWidth;check.height=probe.naturalHeight;
+    const context=check.getContext('2d',{willReadFrequently:true});context.drawImage(probe,0,0);
+    const pixels=context.getImageData(0,0,check.width,check.height).data;
+    let occupied=0;for(let i=3;i<pixels.length;i+=64)if(pixels[i]>40)occupied++;
+    if(occupied<100)throw new Error('Captured door is blank');
+    return result;
+  }
   const mobileQuery = window.matchMedia('(max-width: 1024px) and (pointer: coarse)');
   function mobileAllowed() { return mobileQuery.matches; }
   function syncVisibility() {
@@ -35,13 +57,7 @@
     if (button) { button.disabled = true; button.textContent = 'מכין תצוגה…'; }
     try {
       const lib = await loadLibrary();
-      await document.fonts?.ready;
-      const image = await lib.toPng(target, {
-        pixelRatio: 3,
-        cacheBust: true,
-        backgroundColor: 'transparent',
-        filter: node => !(node instanceof Element && node.matches('.tambur,.door-color-panel,.floorplace,.alertplace'))
-      });
+      const image = await captureExactDoor(lib,target);
       // Send after viewer loads; mobile Safari can defer opening the new tab.
       let attempts = 0;
       const send = () => {
