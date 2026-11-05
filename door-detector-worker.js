@@ -64,14 +64,20 @@ self.onmessage=e=>{
       if(score!==null&&(!bestTop||score>bestTop.score))bestTop={tilt,score};
      }
      if(!bestTop||bestTop.score<13)continue;
-     let floor=horizontal(bottom,bottomLeft+4,bottomRight-4,0)||0;
-     const q=[[topLeft,top-bestTop.tilt*(topRight-topLeft)/2],[topRight,top+bestTop.tilt*(topRight-topLeft)/2],[bottomRight,bottom],[bottomLeft,bottom]];
+     let floor=0,bestBottom=bottom;
+     for(const dy of [-8,-4,0,4,8]){
+      const yy=bottom+dy;if(yy>=maxY-3)continue;
+      const strength=horizontal(yy,bottomLeft+4,bottomRight-4,0)||0;
+      if(strength>floor){floor=strength;bestBottom=yy}
+     }
+     if(floor<9)continue;
+     const q=[[topLeft,top-bestTop.tilt*(topRight-topLeft)/2],[topRight,top+bestTop.tilt*(topRight-topLeft)/2],[bottomRight,bestBottom],[bottomLeft,bestBottom]];
      if(q.some(p=>!inside(Math.round(p[0]),Math.round(p[1]))))continue;
      const center=(L.x+R.x)/2;
-     const score=Math.min(L.strength,R.strength)*2+bestTop.score*1.6+Math.min(floor,55)*.3
+     const score=Math.min(L.strength,R.strength)*2+bestTop.score*1.6+Math.min(floor,55)*1.0
        +Math.min(height/spanY,.75)*15-Math.abs(center-(minX+maxX)/2)/spanX*12;
      if(candidates.length<8||score>candidates[candidates.length-1].score){
-      candidates.push({score,quad:q,quality:Math.min(L.strength,R.strength,bestTop.score),rect:[Math.min(topLeft,bottomLeft),top,Math.max(topRight,bottomRight),bottom]});
+      candidates.push({score,quad:q,quality:Math.min(L.strength,R.strength,bestTop.score),rect:[Math.min(topLeft,bottomLeft),top,Math.max(topRight,bottomRight),bestBottom]});
       candidates.sort((a,b)=>b.score-a.score);if(candidates.length>8)candidates.pop();
      }
     }
