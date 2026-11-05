@@ -36,12 +36,12 @@ self.onmessage=e=>{
   const candidates=[];
   const dx=Math.max(3,Math.round(iw/85)),dy=Math.max(4,Math.round(ih/95));
   const yTopMax=y0+ih*.58;
-  for(let top=y0+6;top<yTopMax;top+=dy*2){
-   for(let bottom=y1-5;bottom>top+ih*.38;bottom-=dy*2){
+  for(let top=y0+6;top<yTopMax;top+=dy*3){
+   for(let bottom=y1-5;bottom>top+ih*.38;bottom-=dy*3){
     const height=bottom-top;
     const sides=[];
     for(let x=x0+6;x<x1-6;x+=dx){
-     for(const slope of [-.27,-.18,-.09,0,.09,.18,.27]){
+     for(const slope of [-.24,-.12,0,.12,.24]){
       const p=[x-slope*height/2,top],q=[x+slope*height/2,bottom];
       if(!valid(p[0],top)||!valid(q[0],bottom))continue;
       const e=measure(p,q,true);
@@ -53,7 +53,7 @@ self.onmessage=e=>{
     const distinct=[];
     for(const side of sides){
      if(distinct.every(v=>Math.abs(v.x-side.x)>dx*2))distinct.push(side);
-     if(distinct.length>=28)break;
+     if(distinct.length>=16)break;
     }
     for(let i=0;i<distinct.length;i++)for(let j=0;j<distinct.length;j++){
      const L=distinct[i],R=distinct[j],width=R.x-L.x;
