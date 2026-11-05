@@ -3,9 +3,10 @@
    The door is captured only when the customer clicks the button.
    Keep all layers and pseudo-elements in #bigdoor. */
 (function () {
-  const VIEWER = 'https://xmiroslav.github.io/door-live-prototype/?v=53&return=' + encodeURIComponent(window.location.href);
+  const VIEWER = 'https://xmiroslav.github.io/door-live-prototype/?v=54&return=' + encodeURIComponent(window.location.href);
   const SCRIPT = 'https://cdn.jsdelivr.net/npm/html-to-image@1.11.13/dist/html-to-image.js';
   let loading;
+  const buttonLabel='הדלת אצלי בבית';
   const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
   async function settleDoor(target) {
     await document.fonts?.ready;
@@ -58,12 +59,23 @@
     try {
       const lib = await loadLibrary();
       const image = await captureExactDoor(lib,target);
-      // Send after viewer loads; mobile Safari can defer opening the new tab.
-      let attempts = 0;
-      const send = () => {
-        if (viewer.closed || ++attempts > 35) return;
-        viewer.postMessage({type:'unidoors-door-image',image}, 'https://xmiroslav.github.io');
-        if (attempts < 35) setTimeout(send, 550);
+      // Transfer the exact door captured at click time. Wait for an explicit
+      // acknowledgement instead of guessing when mobile Safari has loaded.
+      const transferId=String(Date.now())+'-'+Math.random().toString(36).slice(2);
+      let attempts=0,acknowledged=false;
+      const listener=e=>{
+        if(e.source!==viewer||e.origin!=='https://xmiroslav.github.io')return;
+        if(e.data?.type==='unidoors-door-ack'&&e.data.transferId===transferId){
+          acknowledged=true;window.removeEventListener('message',listener);
+        }
+      };
+      window.addEventListener('message',listener);
+      const send=()=>{
+        if(acknowledged||viewer.closed||++attempts>80){
+          window.removeEventListener('message',listener);return;
+        }
+        viewer.postMessage({type:'unidoors-door-image',image,transferId},'https://xmiroslav.github.io');
+        setTimeout(send,650);
       };
       send();
     } catch (error) {
@@ -71,7 +83,7 @@
       alert('לא ניתן להכין את הדלת לתצוגה. בדוק תמונות חיצוניות ו-CORS.');
       viewer.close();
     } finally {
-      if (button) { button.disabled = false; button.textContent = '🚪'; }
+      if (button) { button.disabled = false; button.innerHTML = '<span aria-hidden="true" style="font-size:23px;line-height:1">🚪</span><span style="font-size:11px;line-height:1.2;font-weight:700">'+buttonLabel+'</span>'; }
     }
   }
   function init() {
@@ -80,11 +92,11 @@
     const button = document.createElement('button');
     button.id = 'unidoors-ar-preview';
     button.type = 'button';
-    button.textContent = '🚪';
+    button.innerHTML = '<span aria-hidden="true" style="font-size:23px;line-height:1">🚪</span><span style="font-size:11px;line-height:1.2;font-weight:700">'+buttonLabel+'</span>';
     button.setAttribute('aria-label', 'הצג את הדלת בבית שלי');
     button.title = 'הצג את הדלת בבית שלי';
     button.hidden = true;
-    button.style.cssText = 'display:none;position:fixed;right:max(18px,env(safe-area-inset-right));bottom:calc(104px + env(safe-area-inset-bottom));z-index:2147483000;width:62px;height:62px;padding:0;display:grid;place-items:center;border:1px solid rgba(255,255,255,.22);border-radius:50%;background:#34383e;color:#fff;font:400 30px Arial;line-height:1;box-shadow:0 6px 20px rgba(0,0,0,.28);cursor:pointer;touch-action:manipulation;direction:rtl';
+    button.style.cssText = 'display:none;position:fixed;right:max(18px,env(safe-area-inset-right));bottom:calc(104px + env(safe-area-inset-bottom));z-index:2147483000;width:78px;height:78px;padding:7px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;text-align:center;border:1px solid rgba(255,255,255,.22);border-radius:50%;background:#34383e;color:#fff;font:400 13px Arial;line-height:1;box-shadow:0 6px 20px rgba(0,0,0,.28);cursor:pointer;touch-action:manipulation;direction:rtl';
     button.addEventListener('click', preview);
     document.body.appendChild(button);
     syncVisibility();
