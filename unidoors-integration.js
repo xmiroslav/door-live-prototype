@@ -3,7 +3,7 @@
    The door is captured only when the customer clicks the button.
    Keep all layers and pseudo-elements in #bigdoor. */
 (function () {
-  const VIEWER = 'https://xmiroslav.github.io/door-live-prototype/?v=34&return=' + encodeURIComponent(window.location.href);
+  const VIEWER = 'https://xmiroslav.github.io/door-live-prototype/?v=38&return=' + encodeURIComponent(window.location.href);
   const SCRIPT = 'https://cdn.jsdelivr.net/npm/html-to-image@1.11.13/dist/html-to-image.js';
   let loading;
   const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -14,11 +14,11 @@
     await new Promise(resolve => requestAnimationFrame(()=>requestAnimationFrame(resolve)));
   }
   function captureFilter(node) {
-    return !(node instanceof Element && (node.id==='unidoors-ar-preview'||node.matches('.tambur,.door-color-panel,.floorplace,.alertplace')));
+    return !(node instanceof Element && node.id==='unidoors-ar-preview');
   }
   async function captureExactDoor(lib,target) {
     await settleDoor(target);
-    const options={pixelRatio:3,cacheBust:true,backgroundColor:'transparent',filter:captureFilter,skipAutoScale:false};
+    const options={pixelRatio:Math.min(4,Math.max(3,window.devicePixelRatio||3)),cacheBust:true,backgroundColor:'transparent',filter:captureFilter,skipAutoScale:false};
     let result=await lib.toPng(target,options);
     const probe=new Image();probe.src=result;await probe.decode();
     const check=document.createElement('canvas');check.width=probe.naturalWidth;check.height=probe.naturalHeight;
