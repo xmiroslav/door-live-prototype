@@ -78,7 +78,7 @@ self.onmessage=e=>{
      const g=gradX(x,y);score+=Math.min(100,g);hits+=g>12?1:0;n++;
     }
     if(n<10)continue;
-    const value=score/n+hits/n*16-Math.abs(shift)*.2-Math.abs(slope)*6;
+    const value=score/n+hits/n*16-Math.abs(shift)*.2-Math.abs(slope)*13;
     if(!chosen||value>chosen.value)chosen={x:x0+shift,slope,value,hits,n};
    }
    return chosen;
@@ -100,7 +100,7 @@ self.onmessage=e=>{
      const g=gradY(x,y);sum+=Math.min(100,g);if(g>13)hits++;n++;
     }
     if(n<8)continue;
-    const value=sum/n+hits/n*12-Math.abs(shift)*.35-Math.abs(tilt)*3;
+    const value=sum/n+hits/n*12-Math.abs(shift)*.35-Math.abs(tilt)*9;
     if(!chosen||value>chosen.value)chosen={y:base+shift,tilt,value,hits,n};
    }
    return chosen&&chosen.hits/chosen.n>.18?chosen:{y:base,tilt:0};
@@ -112,6 +112,11 @@ self.onmessage=e=>{
    const y=(horizontal.y+horizontal.tilt*(side.x-midX-side.slope*midY))/denominator;
    return [side.x+side.slope*(y-midY),y];
   };
+  // On nearly frontal doors, independent noisy edge fits can invent a false
+  // vanishing point. Preserve perspective only when the two jambs agree.
+  if(Math.abs(left.slope-right.slope)>.16&&Math.abs(left.slope)<.10&&Math.abs(right.slope)<.10){
+   const common=(left.slope+right.slope)/2;left.slope=common;right.slope=common;
+  }
   const quad=[intersect(left,lintel),intersect(right,lintel),intersect(right,threshold),intersect(left,threshold)];
   const topW=quad[1][0]-quad[0][0],bottomW=quad[2][0]-quad[3][0];
   const height=bottom-best.top,aspect=height/Math.max(1,(topW+bottomW)/2);
