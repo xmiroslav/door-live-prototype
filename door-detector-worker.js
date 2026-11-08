@@ -87,8 +87,32 @@ self.onmessage=e=>{
   if(!left||!right||left.hits/left.n<.15||right.hits/right.n<.15){
    self.postMessage({id,epoch,mode,best:null,quality:0});return;
   }
-  const at=(line,y)=>[line.x+line.slope*(y-(best.top+bottom)/2),y];
-  const quad=[at(left,best.top),at(right,best.top),at(right,bottom),at(left,bottom)];
+  // Fit the lintel and threshold as lines, rather than forcing both horizontal.
+  // Intersections with the two jambs preserve the photographed perspective.
+  const midX=(best.l+best.r)/2,midY=(best.top+bottom)/2;
+  const fitHorizontal=(base,span,limit)=>{
+   let chosen=null;
+   for(let tilt=-limit;tilt<=limit;tilt+=.015)for(let shift=-9;shift<=9;shift+=2){
+    let sum=0,hits=0,n=0;
+    for(let x=best.l+7;x<best.r-7;x+=3){
+     const y=Math.round(base+shift+tilt*(x-midX));
+     if(y<3||y>=h-3)continue;
+     const g=gradY(x,y);sum+=Math.min(100,g);if(g>13)hits++;n++;
+    }
+    if(n<8)continue;
+    const value=sum/n+hits/n*12-Math.abs(shift)*.35-Math.abs(tilt)*3;
+    if(!chosen||value>chosen.value)chosen={y:base+shift,tilt,value,hits,n};
+   }
+   return chosen&&chosen.hits/chosen.n>.18?chosen:{y:base,tilt:0};
+  };
+  const lintel=fitHorizontal(best.top,best.r-best.l,.30);
+  const threshold=fitHorizontal(bottom,best.r-best.l,.22);
+  const intersect=(side,horizontal)=>{
+   const denominator=1-horizontal.tilt*side.slope;
+   const y=(horizontal.y+horizontal.tilt*(side.x-midX-side.slope*midY))/denominator;
+   return [side.x+side.slope*(y-midY),y];
+  };
+  const quad=[intersect(left,lintel),intersect(right,lintel),intersect(right,threshold),intersect(left,threshold)];
   const topW=quad[1][0]-quad[0][0],bottomW=quad[2][0]-quad[3][0];
   const height=bottom-best.top,aspect=height/Math.max(1,(topW+bottomW)/2);
   // Do not automatically place a full door in a window or tiny interior rectangle.
