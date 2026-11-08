@@ -246,7 +246,7 @@ function gradients(gray){
 let detectorWorker=null,detectorPending=false,detectorSeq=0,detectorTimeout=0,detectorEpoch=0,detectorMode='';
 function invalidateDetection(){detectorEpoch++;detectorPending=false;clearTimeout(detectorTimeout);detectorSeq++;}
 try{
- detectorWorker=new Worker(new URL('./door-detector-worker.js?v=86',location.href));
+ detectorWorker=new Worker(new URL('./door-detector-worker.js?v=87',location.href));
  detectorWorker.onmessage=e=>{
   detectorPending=false;clearTimeout(detectorTimeout);
   const result=e.data;if(!result||result.id!==detectorSeq||result.epoch!==detectorEpoch||result.mode!==(photo?'photo':'live')||found||editCorners||markOpening||(!photo&&!stream))return;
@@ -384,14 +384,14 @@ function trackCV(gray){
    if(xx<4||yy<4||xx>probe.width-4||yy>probe.height-4)continue;
    a.push(x,y);b.push(xx,yy);kept.push(i);
   }
-  if(kept.length<12){lostFrames++;return false}
+  if(kept.length<12){lostFrames++;seedCV(gray);return false}
   src=cv.matFromArray(kept.length,1,cv.CV_32FC2,a);
   dst=cv.matFromArray(kept.length,1,cv.CV_32FC2,b);
   inlierMask=new cv.Mat();
   H=cv.findHomography(src,dst,cv.RANSAC,2.5,inlierMask,1000,.99);
-  if(H.empty()){lostFrames++;return false}
+  if(H.empty()){lostFrames++;seedCV(gray);return false}
   let count=0;for(let i=0;i<kept.length;i++)if(inlierMask.data[i])count++;
-  if(count<12||count/kept.length<.72){trackingConfidence=0;lostFrames++;return false}
+  if(count<12||count/kept.length<.62){trackingConfidence=0;lostFrames++;seedCV(gray);return false}
   const d=H.type()===cv.CV_64FC1?H.data64F:H.data32F;
   const sx=probe.width/canvas.width,sy=probe.height/canvas.height;
   const projected=points.map(q=>{
@@ -402,9 +402,9 @@ function trackCV(gray){
   const oldArea=area(points),newArea=area(projected);
   if(!acceptTrackedQuad(gray,projected)||projected.some((q,i)=>!Number.isFinite(q[0])||!Number.isFinite(q[1])||Math.hypot(q[0]-points[i][0],q[1]-points[i][1])>canvas.width*.22)||
    oldArea*newArea<=0||Math.abs(newArea/oldArea)<.65||Math.abs(newArea/oldArea)>1.5){
-   lostFrames++;return false;
+   lostFrames++;seedCV(gray);return false;
   }
-  const alpha=count/kept.length>.85?.8:.65;
+  const alpha=count/kept.length>.85?.9:.8;
   points=points.map((q,i)=>[q[0]*(1-alpha)+projected[i][0]*alpha,q[1]*(1-alpha)+projected[i][1]*alpha]);
   trackingConfidence=count/kept.length;lostFrames=0;hint.textContent='מעקב תמונה · בדיקת משקוף פעילה';
   // Keep only geometrically consistent features, not drifting or occluded pixels.
@@ -414,7 +414,7 @@ function trackCV(gray){
   cvFeatures=cv.matFromArray(tracked.length/2,1,cv.CV_32FC2,tracked);
   if(cvFeatures.rows<28)seedCV(gray);
   draw();return true;
- }catch(e){console.warn('OpenCV tracking error',e);lostFrames++;return false}
+ }catch(e){console.warn('OpenCV tracking error',e);lostFrames++;resetCV();return false}
  finally{for(const m of [current,next,status,errors,back,backStatus,backErrors,H,src,dst,inlierMask])if(m)m.delete();cvBusy=false}
 }
 // Worker-based fallback tracking avoids blocking pointer input and rendering.
@@ -427,18 +427,18 @@ function resetWorkerTracking(){
 function ensureTrackerWorker(){
  if(trackerWorker)return true;
  try{
-  trackerWorker=new Worker(new URL('./door-tracker-worker.js?v=84',location.href));
+  trackerWorker=new Worker(new URL('./door-tracker-worker.js?v=87',location.href));
   trackerWorker.onmessage=e=>{
    const r=e.data;
    if(!r||r.session!==trackerSession||r.id!==trackerSeq)return;
    trackerPending=false;clearTimeout(trackerTimer);
    if(!tracking||!stream||photo||editCorners||markOpening||drag>=0)return;
    if(r.ready)return;
-   if(!r.ok){trackingConfidence=0;lostFrames++;hint.textContent='מעקב לא יציב · מחפשים נקודות ייחוס';if(lostFrames>=5)loseTracking();return}
+   if(!r.ok){trackingConfidence=0;lostFrames++;hint.textContent='מעקב לא יציב · מחפשים נקודות ייחוס';if(lostFrames>=9)loseTracking();return}
    const sx=canvas.width/probe.width,sy=canvas.height/probe.height;
    const projected=r.proposed.map(p=>[p[0]*sx,p[1]*sy]);
    if(!acceptTrackedQuad(captureGray(),projected)||projected.some((p,i)=>Math.hypot(p[0]-points[i][0],p[1]-points[i][1])>canvas.width*.12)){
-    lostFrames++;if(lostFrames>=5)loseTracking();return;
+    lostFrames++;if(lostFrames>=9)loseTracking();return;
    }
    // Smooth only when the proposed motion is small; large camera movements
    // should not be lagged behind by a low-pass filter.
@@ -487,7 +487,7 @@ function loseTracking(){
  tracking=false;previous=null;trackingConfidence=0;jambReference=0;jambFailures=0;resetCV();resetWorkerTracking();
  autoSearch=false;autoCandidate=null;autoCandidateCount=0;lastSearch=0;setBusy(null);
  editCorners=false;hideGuides=true;document.getElementById('adjust').classList.remove('active');
- hint.textContent='המעקב אבד · הדלת נשארה במקום האחרון · התאימו פינות או בחרו חיפוש מחדש';draw();
+ hint.textContent='המעקב אבד · הדלת נשארה במיקום האחרון · לחצו על חיפוש מחדש או התאימו פינות';draw();
 }
 function updateTracking(){
  if(!tracking||photo||!stream||drag>=0||editCorners||markOpening)return;
@@ -495,13 +495,13 @@ function updateTracking(){
  const current=captureGray();if(!current)return;
  if(cvReady){
   if(trackCV(current)){previous=current;return}
-  if(lostFrames>=12){loseTracking();return}
+  if(lostFrames>=9){loseTracking();return}
   previous=current;return;
  }
  if(!ensureTrackerWorker()){hint.textContent='מעקב אינו זמין · ניתן להתאים את הפינות ידנית';loseTracking();return}
  trackerPending=true;const id=++trackerSeq,session=trackerSession;
  const quad=points.map(p=>[p[0]*probe.width/canvas.width,p[1]*probe.height/canvas.height]);
- trackerTimer=setTimeout(()=>{if(trackerPending&&session===trackerSession&&id===trackerSeq){loseTracking()}},2500);
+ trackerTimer=setTimeout(()=>{if(trackerPending&&session===trackerSession&&id===trackerSeq){resetWorkerTracking();lostFrames++;if(lostFrames>=9)loseTracking()}},1200);
  trackerWorker.postMessage({id,session,buffer:current.buffer,w:probe.width,h:probe.height,quad},[current.buffer]);
 }
 document.getElementById('mark').onclick=()=>{collapseTools();setBusy(null);invalidateDetection();resetCV();tracking=false;markOpening=true;manualCorners=[];editCorners=false;hideGuides=true;document.getElementById('adjust').classList.remove('active');hint.textContent='סמנו 4 פינות: שמאל למעלה, ימין למעלה, ימין למטה, שמאל למטה';draw()};
