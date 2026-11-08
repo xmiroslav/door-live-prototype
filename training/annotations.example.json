@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "coordinate_system": "original_image_pixels",
+  "keypoint_order": [
+    "top_left",
+    "top_right",
+    "bottom_right",
+    "bottom_left"
+  ],
+  "images": [
+    {
+      "file": "example-door.jpg",
+      "width": 1200,
+      "height": 1600,
+      "instances": [
+        {
+          "class": "closed_door",
+          "bbox_xywh": [
+            250,
+            160,
+            700,
+            1270
+          ],
+          "keypoints_xy": [
+            [
+              270,
+              190
+            ],
+            [
+              935,
+              175
+            ],
+            [
+              950,
+              1420
+            ],
+            [
+              245,
+              1430
+            ]
+          ],
+          "visible": [
+            true,
+            true,
+            true,
+            true
+          ]
+        }
+      ]
+    }
+  ]
+}
