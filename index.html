@@ -192,7 +192,7 @@ document.getElementById('file').onchange=loadRoomPhoto;
 document.getElementById('gallery').onchange=loadRoomPhoto;
 let busyState='',searchStart=0;
 function setBusy(message){busyState=message||'';const el=document.getElementById('busy');el.hidden=!message;if(message)document.getElementById('busyText').textContent=message}
-function liveSearchStatus(){if(!stream||photo||found||!autoSearch||markOpening||editCorners)return;const elapsed=Date.now()-searchStart;if(elapsed>18000){setBusy(null);autoSearch=false;invalidateDetection();hint.textContent='לא זוהה פתח בטוח · סמנו ארבע פינות דרך התאמה ← סימון ידני'}else setBusy(elapsed<3000?'סורקים את החדר…':'מזהים משקוף וקו רצפה…')}
+function liveSearchStatus(){if(!stream||photo||found||!autoSearch||markOpening||editCorners)return;const elapsed=Date.now()-searchStart;if(elapsed>4000){setBusy(null);autoSearch=false;invalidateDetection();hint.textContent='לא זוהה פתח בטוח · סמנו ארבע פינות דרך התאמה ← סימון ידני'}else setBusy(elapsed<1400?'סורקים את החדר…':'מזהים משקוף וקו רצפה…')}
 function loadRoomPhoto(e){
  const f=e.target.files&&e.target.files[0];if(!f)return;
  setBusy('טוענים את התמונה…');hint.textContent='טוענים תמונה…';const url=URL.createObjectURL(f),im=new Image();
@@ -246,7 +246,7 @@ function gradients(gray){
 let detectorWorker=null,detectorPending=false,detectorSeq=0,detectorTimeout=0,detectorEpoch=0,detectorMode='';
 function invalidateDetection(){detectorEpoch++;detectorPending=false;clearTimeout(detectorTimeout);detectorSeq++;}
 try{
- detectorWorker=new Worker(new URL('./door-detector-worker.js?v=85',location.href));
+ detectorWorker=new Worker(new URL('./door-detector-worker.js?v=86',location.href));
  detectorWorker.onmessage=e=>{
   detectorPending=false;clearTimeout(detectorTimeout);
   const result=e.data;if(!result||result.id!==detectorSeq||result.epoch!==detectorEpoch||result.mode!==(photo?'photo':'live')||found||editCorners||markOpening||(!photo&&!stream))return;
@@ -271,7 +271,7 @@ function detectOpeningAsync(){
  if(detectorPending||found||editCorners||markOpening)return;
  const gray=captureGray();if(!gray){setBusy(null);return}
  detectorPending=true;const id=++detectorSeq,epoch=detectorEpoch,mode=photo?'photo':'live';
- detectorTimeout=setTimeout(()=>{if(detectorPending&&id===detectorSeq&&epoch===detectorEpoch){detectorPending=false;invalidateDetection();setBusy(null);if(photo&&!found){markOpening=true;manualCorners=[];editCorners=false;hideGuides=true;hint.textContent='הזיהוי נמשך זמן רב · סמנו ארבע פינות ידנית';draw()}else hint.textContent='החיפוש מתעכב · ניתן לסמן את הפתח ידנית'}},photo?8500:5000);
+ detectorTimeout=setTimeout(()=>{if(detectorPending&&id===detectorSeq&&epoch===detectorEpoch){detectorPending=false;invalidateDetection();setBusy(null);if(photo&&!found){markOpening=true;manualCorners=[];editCorners=false;hideGuides=true;hint.textContent='הזיהוי נמשך זמן רב · סמנו ארבע פינות ידנית';draw()}else hint.textContent='החיפוש מתעכב · ניתן לסמן את הפתח ידנית'}},photo?8500:2200);
  const target=targetCenter?targetCenter.slice():null;
  detectorWorker.postMessage({id,epoch,mode,w:probe.width,h:probe.height,buffer:gray.buffer,target,still:!!photo},[gray.buffer]);
 }
@@ -513,6 +513,6 @@ document.getElementById('start').onclick=async()=>{invalidateDetection();resetCV
 
 canvas.addEventListener('pointerup',()=>{if(wasDragging){wasDragging=false;return}if(!found||!editCorners)return;manualLock=true;lostFrames=0});
 let processing=false;
-setInterval(()=>{if(!stream||photo||drag>=0||manualAdjusting||editCorners||markOpening||document.hidden||processing)return;processing=true;try{if(tracking)updateTracking();else if(autoSearch&&!found&&Date.now()-lastSearch>850){lastSearch=Date.now();liveSearchStatus();detectOpeningAsync()}}catch(e){console.error('Tracking failed',e);tracking=false;hint.textContent='שגיאת מעקב · געו שוב בפתח'}finally{processing=false}},300);
+setInterval(()=>{if(!stream||photo||drag>=0||manualAdjusting||editCorners||markOpening||document.hidden||processing)return;processing=true;try{if(tracking)updateTracking();else if(autoSearch&&!found&&Date.now()-lastSearch>320){lastSearch=Date.now();liveSearchStatus();detectOpeningAsync()}}catch(e){console.error('Tracking failed',e);tracking=false;hint.textContent='שגיאת מעקב · געו שוב בפתח'}finally{processing=false}},300);
 
 </script></body></html>
