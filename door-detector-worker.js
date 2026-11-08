@@ -36,10 +36,10 @@ self.onmessage=e=>{
   // Rank pairs of full-height jambs, preferring the outer enclosing pair.
   let best=null;
   for(let l=x0+iw*.07|0;l<x0+iw*.68;l+=2){
-   if(vx[l]<8)continue;
+   if(vx[l]<5.5)continue;
    for(let rr=l+iw*.22|0;rr<x1-iw*.05;rr+=2){
     const width=rr-l;
-    if(width>iw*.84||vx[rr]<8)continue;
+    if(width>iw*.90||vx[rr]<5.5)continue;
     let topPeak=0,topY=0;
     for(let y=y0+ih*.09|0;y<y0+ih*.46;y+=3){
      let sum=0,hits=0;
@@ -47,14 +47,14 @@ self.onmessage=e=>{
      const count=Math.max(1,(width-8)/4),score=sum/count+hits/count*10;
      if(score>topPeak){topPeak=score;topY=y}
     }
-    if(topPeak<9)continue;
+    if(topPeak<6.5)continue;
     // A complete doorway extends down to the floor, not to a window sill.
     const side=Math.min(vx[l],vx[rr]);
-    const score=side*1.7+topPeak+width/iw*20-Math.abs((l+rr)/2-(x0+x1)/2)/iw*8;
+    const score=side*1.7+topPeak+width/iw*27-Math.abs((l+rr)/2-(x0+x1)/2)/iw*8;
     if(!best||score>best.score)best={l,r:rr,top:topY,score,side,topPeak};
    }
   }
-  if(!best||best.side<9||best.topPeak<9){self.postMessage({id,epoch,mode,best:null,quality:0});return}
+  if(!best||best.side<6||best.topPeak<6.5){self.postMessage({id,epoch,mode,best:null,quality:0});return}
   // Locate the actual threshold in the lower part of the photo. Do not
   // stretch the door down to the viewport or beyond the photographed floor.
   let bottom=Math.round(y0+ih*.84),bottomScore=-1;
@@ -84,7 +84,7 @@ self.onmessage=e=>{
    return chosen;
   };
   const left=fitJamb(best.l),right=fitJamb(best.r);
-  if(!left||!right||left.hits/left.n<.26||right.hits/right.n<.26){
+  if(!left||!right||left.hits/left.n<.15||right.hits/right.n<.15){
    self.postMessage({id,epoch,mode,best:null,quality:0});return;
   }
   const at=(line,y)=>[line.x+line.slope*(y-(best.top+bottom)/2),y];
@@ -94,7 +94,7 @@ self.onmessage=e=>{
   // Do not automatically place a full door in a window or tiny interior rectangle.
   if(topW<iw*.19||bottomW<iw*.19||Math.min(topW,bottomW)<16||
      Math.max(topW,bottomW)/Math.min(topW,bottomW)>1.55||
-     aspect<1.35||aspect>3.8||bottomScore<8){
+     aspect<1.25||aspect>4.2||bottomScore<5){
    self.postMessage({id,epoch,mode,best:null,quality:0});return;
   }
   self.postMessage({id,epoch,mode,best:[best.l,best.top,best.r,bottom],quad,
