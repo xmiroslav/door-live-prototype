@@ -55,3 +55,17 @@ https://github.com/open-mmlab/mmpose/issues/3277
 https://github.com/open-mmlab/mmpose/issues/3282
 https://onnxruntime.ai/docs/get-started/with-javascript/web.html
 https://github.com/Tau-J/rtmlib/blob/main/README.md
+
+## Alternative chosen for feasibility prototyping: MediaPipe custom detector
+Status: **APPROVED FOR INTEGRATION SCAFFOLD, NOT APPROVED FOR PRODUCTION DETECTION**.
+- Google MediaPipe Tasks Vision: Apache-2.0 source, WebAssembly browser execution on modern Safari/Chrome, local on-device inference.
+- MediaPipe Model Maker supports custom object detection; select and verify the exact compatible base TFLite checkpoint and its license before training or redistribution.
+- Detection output is an axis-aligned bounding box, NOT four doorway corners. Existing geometric line refinement/manual 4-corner UI must remain, with independent evaluation.
+- Do not assume a generic COCO detector knows doors.
+- Preserve current detector as default; new detector must be behind a disabled-by-default feature flag until a trained compatible .tflite model is supplied and validated.
+- No per-frame API cost; hosting bandwidth, training compute, and maintenance still have costs.
+- Performance and corner accuracy are not guaranteed. Benchmark Safari on physical iPhone and Android Chrome before enabling.
+References:
+https://github.com/google-ai-edge/mediapipe
+https://codelabs.developers.google.com/mp-object-detection-web
+https://developers.google.com/mediapipe
