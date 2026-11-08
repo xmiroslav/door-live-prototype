@@ -40,3 +40,18 @@ https://github.com/open-mmlab/mmpose
 https://github.com/open-mmlab/mmdetection
 https://onnxruntime.ai/docs/get-started/with-javascript/web.html
 https://github.com/open-mmlab/mmpose/issues/3273
+
+## Feasibility audit — 2026-11-08
+Decision: **CONDITIONAL / NOT APPROVED FOR PRODUCTION YET**.
+- Browser feasibility: ONNX Runtime Web documents WASM support for iOS Safari and Android Chrome; WebGPU is not supported for iOS Safari in the current support matrix. Benchmark WASM on target iPhones.
+- Cost: self-hosted browser inference has no per-inference API fee, but incurs CDN/hosting bandwidth, one-time training compute, engineering and maintenance costs.
+- Licensing: OpenMMLab source Apache-2.0 verified; exact RTMPose/RTMDet pretrained checkpoint and training-data provenance NOT cleared. Open MMPose issues #3277 and #3282 request clarification. Do not download, train from, or ship ambiguous checkpoints for commercial release until cleared; prefer verified commercially permitted initializations or train from scratch if practical.
+- Accuracy: RTMPose-s is human keypoint estimation, NOT pretrained door corners. Four-corner accuracy, open/closed detection, white-on-white, negatives, multiple doors and tracking remain unproven.
+- Performance: RTMDet published latency is on NVIDIA GPU, not Safari. A real-device ONNX WASM benchmark is mandatory before committing to this architecture.
+- Perspective projection needs 4 corners; metric depth/true 3D anchoring cannot be guaranteed from a single RGB camera frame by RTMPose alone.
+- Gate: prove asset license; train proof of concept on licensed annotated images; benchmark held-out corner error, false positives, first detection under 4s, drift, cold load, memory and heat on iPhone and Android; then approve feature-flagged integration. Retain current manual fallback and previous revision.
+Sources:
+https://github.com/open-mmlab/mmpose/issues/3277
+https://github.com/open-mmlab/mmpose/issues/3282
+https://onnxruntime.ai/docs/get-started/with-javascript/web.html
+https://github.com/Tau-J/rtmlib/blob/main/README.md
