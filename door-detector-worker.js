@@ -148,7 +148,7 @@ self.onmessage=e=>{
   const near=candidates.findIndex(c=>Math.abs(c.rect[0]-rect[0])<12&&Math.abs(c.rect[1]-rect[1])<12&&Math.abs(c.rect[2]-rect[2])<12&&Math.abs(c.rect[3]-rect[3])<18);
   if(near>=0){if(score>candidates[near].score)candidates[near]={rect,score,quality};return}
   candidates.push({rect,score,quality});candidates.sort((a,b)=>b.score-a.score);
-  if(candidates.length>14)candidates.length=14;
+  if(candidates.length>8)candidates.length=8;
  };
  const margin=mode==='photo'?6:9;
  const step=Math.max(9,Math.round(w*.045));
@@ -168,7 +168,7 @@ self.onmessage=e=>{
      const distance=Math.hypot((left+width/2-cx)*1.1,((top+bottom)/2-cy)*.85);
      const strength=2*Math.min(vl,vr)+.65*(vl+vr)+1.35*lintel+.5*continuity+q*1.5;
      const score=strength*(.65+.35*balance)-distance*(target?1.8:.12);
-     if(q>(target?7:11))consider([left,top,right,bottom],score,q);
+     if(q>(target?6:9))consider([left,top,right,bottom],score,q);
     }
    }
   }
@@ -200,7 +200,7 @@ self.onmessage=e=>{
  };
  const refineQuad=rect=>{
   const [l,t,r,b]=rect,left=fitSide(l,t,b),right=fitSide(r,t,b),top=fitTop(t,l,r);
-  if(!left||!right||!top||left.valid<6||right.valid<6||top.valid<5)return null;
+  if(!left||!right||!top||left.valid<5||right.valid<5||top.valid<4)return null;
   const midY=(t+b)/2,midX=(l+r)/2;
   const intersection=side=>{
    const slope=side.tilt,k=top.tilt;
@@ -257,7 +257,7 @@ self.onmessage=e=>{
   const leftEdge=v(l,t,b),rightEdge=v(r,t,b),topEdge=hor(t,l,r);
   const continuity=Math.min(v(l,t,t+(b-t)*.4),v(l,t+(b-t)*.6,b),v(r,t,t+(b-t)*.4),v(r,t+(b-t)*.6,b));
   const frameQuality=Math.min(leftEdge,rightEdge,topEdge);
-  if(frameQuality<(target?9:14)||continuity<8)continue;
+  if(frameQuality<(target?8:11)||continuity<7)continue;
   // Higher preference for long, coherent jambs rather than isolated interior lines.
   const rank=candidate.score+continuity*1.8+Math.min(frameQuality,55)*1.5;
   if(!winner||rank>winner.rank)winner={rect,quad,rank,quality:frameQuality};
