@@ -279,6 +279,8 @@ try{
   if(!result.quad){if(photo){setBusy(null);found=false;markOpening=true;manualCorners=[];editCorners=false;hint.textContent='המסגרת אינה ברורה · סמנו ארבע פינות ידנית';draw()}else{hint.textContent='מחפשים קווי משקוף ברורים…'}return}
   const [l,t,r,b]=result.best,sx=canvas.width/probe.width,sy=canvas.height/probe.height;
   const candidate=result.quad.map(p=>[p[0]*sx,p[1]*sy]);
+  // Shared validation gate for both future ML keypoints and geometry proposals.
+  if(window.DoorGeometry&&!window.DoorGeometry.assess(candidate,{width:canvas.width,height:canvas.height}).ok){if(photo){markOpening=true;manualCorners=[];editCorners=false;setBusy(null);hint.textContent='יש לסמן את ארבע פינות המשקוף';draw()}return;}
   if(!validDoorQuad(candidate)||(!photo&&!plausibleDoorAnchor(candidate))){if(photo)setBusy(null);else liveSearchStatus();if(photo){markOpening=true;manualCorners=[];editCorners=false;hideGuides=true;hint.textContent='לא אומתה מסגרת מלאה · סמנו ארבע פינות חיצוניות של המשקוף עד הרצפה';draw()}return}
   setBusy(null);points=candidate;found=true;autoSearch=false;manualLock=false;tracking=!!stream&&!photo;
   previous=tracking?captureGray():null;lostFrames=0;if(tracking&&previous)initializeJambReference(previous);
