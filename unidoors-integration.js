@@ -33,7 +33,7 @@
   function mobileAllowed() { return mobileQuery.matches; }
   function syncVisibility() {
     const button = document.getElementById('unidoors-ar-preview');
-    if (button) { button.hidden = !mobileAllowed(); button.style.display = mobileAllowed() ? 'block' : 'none'; }
+    if (button) { button.hidden = !mobileAllowed(); button.style.display = mobileAllowed() ? 'flex' : 'none'; }
   }
   function loadLibrary() {
     if (window.htmlToImage) return Promise.resolve(window.htmlToImage);
@@ -89,7 +89,7 @@
       alert('לא ניתן להכין את הדלת לתצוגה. בדוק תמונות חיצוניות ו-CORS.');
       close();
     } finally {
-      if (button) { button.disabled = false; button.innerHTML = '<span style="font-size:12px;line-height:1.3;font-weight:700">'+buttonLabel+'</span>'; }
+      if (button) { button.disabled = false; button.innerHTML = '<span style="font-size:13px;line-height:1.25;font-weight:700;text-align:center;display:block;width:100%">'+buttonLabel+'</span>'; }
     }
   }
   function init() {
@@ -102,7 +102,7 @@
     button.setAttribute('aria-label', 'הצג את הדלת בבית שלי');
     button.title = 'הצג את הדלת בבית שלי';
     button.hidden = true;
-    button.style.cssText = 'display:none;position:fixed;right:max(18px,env(safe-area-inset-right));bottom:calc(104px + env(safe-area-inset-bottom));z-index:2147483000;width:78px;height:78px;padding:7px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;text-align:center;border:1px solid rgba(255,255,255,.22);border-radius:50%;background:#34383e;color:#fff;font:400 13px Arial;line-height:1;box-shadow:0 6px 20px rgba(0,0,0,.28);cursor:pointer;touch-action:manipulation;direction:rtl';
+    button.style.cssText = 'display:none;position:fixed;right:max(18px,env(safe-area-inset-right));bottom:calc(104px + env(safe-area-inset-bottom));z-index:2147483000;width:78px;height:78px;padding:7px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;text-align:center;border:1px solid rgba(255,255,255,.22);border-radius:50%;background:#369b72;color:#fff;font:700 13px Arial;line-height:1;box-shadow:0 6px 20px rgba(20,92,64,.25);cursor:pointer;touch-action:manipulation;direction:rtl';
     button.addEventListener('click', preview);
     document.body.appendChild(button);
     syncVisibility();
