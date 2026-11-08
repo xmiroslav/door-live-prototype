@@ -24,7 +24,7 @@ class DoorProjector{
   if(!gl)throw Error('WebGL unavailable');
   this.gl=gl;
   const vs=shader(gl,gl.VERTEX_SHADER,'attribute vec2 position;varying vec2 screen;void main(){screen=(position+1.0)*0.5;gl_Position=vec4(position,0.,1.);}');
-  const fs=shader(gl,gl.FRAGMENT_SHADER,'precision highp float;varying vec2 screen;uniform mat3 invH;uniform vec2 size;uniform sampler2D door;void main(){vec2 xy=vec2(screen.x,1.0-screen.y)*size;vec3 uvh=invH*vec3(xy,1.0);if(abs(uvh.z)<0.000001)discard;vec2 uv=uvh.xy/uvh.z;if(uv.x<0.0||uv.x>1.0||uv.y<0.0||uv.y>1.0)discard;gl_FragColor=texture2D(door,uv);}');
+  const fs=shader(gl,gl.FRAGMENT_SHADER,'precision highp float;varying vec2 screen;uniform mat3 invH;uniform vec2 size;uniform sampler2D door;void main(){vec2 xy=vec2(screen.x,1.0-screen.y)*size;vec3 uvh=invH*vec3(xy,1.0);if(abs(uvh.z)<0.000001)discard;vec2 uv=uvh.xy/uvh.z;if(uv.x<0.0||uv.x>1.0||uv.y<0.0||uv.y>1.0)discard;gl_FragColor=texture2D(door,vec2(uv.x,1.0-uv.y));}');
   const pr=gl.createProgram();gl.attachShader(pr,vs);gl.attachShader(pr,fs);gl.linkProgram(pr);
   if(!gl.getProgramParameter(pr,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(pr));
   gl.useProgram(pr);this.program=pr;
