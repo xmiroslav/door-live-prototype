@@ -151,10 +151,10 @@ self.onmessage=e=>{
   if(candidates.length>14)candidates.length=14;
  };
  const margin=mode==='photo'?6:9;
- const step=Math.max(5,Math.round(w*.026));
+ const step=Math.max(9,Math.round(w*.045));
  for(let top=margin;top<h*.62;top+=step){
   for(let width=Math.max(20,Math.round(w*.08));width<=Math.min(w*.78,Math.round(h*.47));width+=step){
-   for(const aspect of [1.65,1.9,2.15,2.4,2.7,3.0]){
+   for(const aspect of [1.75,2.1,2.45,2.85]){
     const height=width*aspect,bottom=top+height;
     if(bottom>h-margin)continue;
     for(let left=margin;left+width<w-margin;left+=step){
@@ -266,5 +266,5 @@ self.onmessage=e=>{
  const best=winner.rect,quality=winner.quality,quad=winner.quad;
  if(last&&Math.hypot(...best.map((x,i)=>x-last[i]))<18)streak++;else streak=1;
  last=best;
- self.postMessage({id,epoch,mode,best,quad,quality,stable:!!still||streak>=3});
+ self.postMessage({id,epoch,mode,best,quad,quality,stable:!!still||streak>=2});
 };
