@@ -3,7 +3,7 @@
    The door is captured only when the customer clicks the button.
    Keep all layers and pseudo-elements in #bigdoor. */
 (function () {
-  const VIEWER = 'https://xmiroslav.github.io/door-live-prototype/?v=78&return=' + encodeURIComponent(window.location.href);
+  const VIEWER = 'https://xmiroslav.github.io/door-live-prototype/?v=79&return=' + encodeURIComponent(window.location.href);
   const SCRIPT = 'https://cdn.jsdelivr.net/npm/html-to-image@1.11.13/dist/html-to-image.js';
   let loading;
   const buttonLabel='הדלת אצלי בבית';
@@ -51,37 +51,43 @@
     if (!mobileAllowed()) return;
     const target = document.getElementById('bigdoor');
     if (!target) { alert('Door element #bigdoor not found'); return; }
-    // Open synchronously with the click so mobile browsers do not block the popup.
-    const viewer = window.open(VIEWER, '_blank');
-    if (!viewer) { alert('Please allow popups for Unidoors'); return; }
+    // Same-tab iframe avoids Safari suspending the source tab and severing window.opener.
+    document.getElementById('unidoors-live-overlay')?.remove();
+    const overlay=document.createElement('div');overlay.id='unidoors-live-overlay';
+    overlay.style.cssText='position:fixed;inset:0;z-index:2147483647;background:#fff';
+    const viewer=document.createElement('iframe');viewer.src=VIEWER;
+    viewer.allow='camera; microphone';viewer.setAttribute('allowfullscreen','');
+    viewer.style.cssText='display:block;width:100%;height:100%;border:0';
+    overlay.appendChild(viewer);document.body.appendChild(overlay);
+    const oldOverflow=document.documentElement.style.overflow;
+    document.documentElement.style.overflow='hidden';
+    const close=()=>{overlay.remove();document.documentElement.style.overflow=oldOverflow;window.removeEventListener('message',onMessage)};
+    const onMessage=e=>{
+      if(e.source!==viewer.contentWindow||e.origin!=='https://xmiroslav.github.io')return;
+      if(e.data?.type==='unidoors-viewer-close')close();
+    };
+    window.addEventListener('message',onMessage);
     const button = document.getElementById('unidoors-ar-preview');
     if (button) { button.disabled = true; button.textContent = '…'; }
     try {
       const lib = await loadLibrary();
       const image = await captureExactDoor(lib,target);
-      // Safari may suspend the configurator when the viewer becomes foreground.
-      // Retain the captured image and resend on viewer-ready and page resume.
       const transferId=String(Date.now())+'-'+Math.random().toString(36).slice(2);
       let acknowledged=false,attempts=0;
       const payload={type:'unidoors-door-image',image,transferId};
-      const send=()=>{if(acknowledged)return;try{viewer.postMessage(payload,'https://xmiroslav.github.io')}catch(e){}};
-      const cleanup=()=>{window.removeEventListener('message',onMessage);document.removeEventListener('visibilitychange',onResume);window.removeEventListener('pageshow',onResume)};
-      const onMessage=e=>{
-        if(e.source!==viewer||e.origin!=='https://xmiroslav.github.io')return;
-        if(e.data?.type==='unidoors-door-ack'&&e.data.transferId===transferId){acknowledged=true;cleanup()}
+      const send=()=>{if(!acknowledged&&overlay.isConnected)viewer.contentWindow?.postMessage(payload,'https://xmiroslav.github.io')};
+      const onTransfer=e=>{
+        if(e.source!==viewer.contentWindow||e.origin!=='https://xmiroslav.github.io')return;
+        if(e.data?.type==='unidoors-door-ack'&&e.data.transferId===transferId){acknowledged=true;window.removeEventListener('message',onTransfer)}
         if(e.data?.type==='unidoors-viewer-ready')send();
       };
-      const onResume=()=>{if(!document.hidden)send()};
-      window.addEventListener('message',onMessage);
-      document.addEventListener('visibilitychange',onResume);
-      window.addEventListener('pageshow',onResume);
-      // Do not depend on a single send immediately after opening a new tab.
-      const retry=()=>{if(acknowledged||++attempts>120){cleanup();return}send();setTimeout(retry,1000)};
-      retry();
+      window.addEventListener('message',onTransfer);
+      const retry=()=>{if(acknowledged||!overlay.isConnected||++attempts>90){window.removeEventListener('message',onTransfer);return}send();setTimeout(retry,500)};
+      viewer.addEventListener('load',send);retry();
     } catch (error) {
       console.error('Unidoors door capture failed:', error);
       alert('לא ניתן להכין את הדלת לתצוגה. בדוק תמונות חיצוניות ו-CORS.');
-      viewer.close();
+      close();
     } finally {
       if (button) { button.disabled = false; button.innerHTML = '<span style="font-size:12px;line-height:1.3;font-weight:700">'+buttonLabel+'</span>'; }
     }
