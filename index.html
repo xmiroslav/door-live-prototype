@@ -212,7 +212,31 @@ function loadRoomPhoto(e){
  im.onerror=()=>{setBusy(null);hint.textContent='לא ניתן לפתוח את התמונה';URL.revokeObjectURL(url)};
  im.src=url;e.target.value='';
 }
-function findOpeningPhoto(){autoCandidate=null;autoCandidateCount=0;setBusy('מזהים את מסגרת הדלת…');detectOpeningAsync()}document.getElementById('save').onclick=async()=>{hideGuides=true;exporting=true;draw();try{const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));if(!blob)throw Error('לא ניתן ליצור תמונה');const file=new File([blob],'unidoors-preview.png',{type:'image/png'});if(navigator.canShare?.({files:[file]})){await navigator.share({files:[file],title:'Unidoors — моя дверь'})}else{const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='unidoors-preview.png';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),5000)}}catch(e){if(e.name!=='AbortError')alert('שגיאה בשמירת התמונה: '+e.message)}finally{hideGuides=!editCorners;exporting=false;draw()}};function choices(id,arr,key){const el=document.getElementById(id);arr.forEach(([label,value])=>{const b=document.createElement('button');b.textContent=label;b.onclick=()=>{style[key]=value;doorCache=null;el.querySelectorAll('button').forEach(n=>n.classList.remove('selected'));b.classList.add('selected');draw()};if(style[key]===value)b.classList.add('selected');el.appendChild(b)})}choices('colors',palette,'color');choices('handles',[['כסוף','silver'],['שחור','black'],['זהב','gold']],'handle');choices('windows',[['ללא חלון','none'],['חלון עליון','top'],['חלון צר','slim']],'window');resize();
+function findOpeningPhoto(){autoCandidate=null;autoCandidateCount=0;setBusy('מזהים את מסגרת הדלת…');detectOpeningAsync()}// iOS browsers cannot write directly into Photos. Offer the native share sheet
+// and a full-size image that users can long-press to save to Photos.
+function showSaveImage(blob){
+ const url=URL.createObjectURL(blob),overlay=document.createElement('div');
+ overlay.id='door-save-preview';overlay.style.cssText='position:fixed;inset:0;z-index:2147483646;background:rgba(10,18,22,.96);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:20px;box-sizing:border-box;direction:rtl';
+ const heading=document.createElement('div');heading.textContent='לחצו לחיצה ארוכה על התמונה ובחרו שמירה בתמונות';heading.style.cssText='color:white;font:500 15px system-ui;text-align:center';
+ const img=document.createElement('img');img.src=url;img.alt='תצוגת הדלת לשמירה';img.style.cssText='max-width:100%;max-height:75vh;object-fit:contain;-webkit-touch-callout:default;user-select:auto';
+ const close=document.createElement('button');close.type='button';close.textContent='סגירה ✕';close.style.cssText='background:white;color:#173331;border:0;border-radius:30px;padding:12px 28px;font:600 16px system-ui';
+ close.onclick=()=>{overlay.remove();URL.revokeObjectURL(url)};
+ overlay.append(heading,img,close);document.body.appendChild(overlay);
+}
+document.getElementById('save').onclick=async()=>{
+ hideGuides=true;exporting=true;draw();
+ try{
+  const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));
+  if(!blob)throw Error('לא ניתן ליצור תמונה');
+  const file=new File([blob],'unidoors-preview.png',{type:'image/png'});
+  if(navigator.canShare?.({files:[file]})){
+   try{await navigator.share({files:[file],title:'Unidoors — תצוגת דלת'});return}
+   catch(e){if(e.name==='AbortError')return;console.warn('Native image share unavailable',e)}
+  }
+  showSaveImage(blob);
+ }catch(e){if(e.name!=='AbortError')alert('שגיאה בשמירת התמונה: '+e.message)}
+ finally{hideGuides=!editCorners;exporting=false;draw()}
+};function choices(id,arr,key){const el=document.getElementById(id);arr.forEach(([label,value])=>{const b=document.createElement('button');b.textContent=label;b.onclick=()=>{style[key]=value;doorCache=null;el.querySelectorAll('button').forEach(n=>n.classList.remove('selected'));b.classList.add('selected');draw()};if(style[key]===value)b.classList.add('selected');el.appendChild(b)})}choices('colors',palette,'color');choices('handles',[['כסוף','silver'],['שחור','black'],['זהב','gold']],'handle');choices('windows',[['ללא חלון','none'],['חלון עליון','top'],['חלון צר','slim']],'window');resize();
 
 // V0.2: local edge-based rectangle proposal + image patch optical tracking.
 const autoBtn=document.getElementById('auto'),hint=document.getElementById('hint');
