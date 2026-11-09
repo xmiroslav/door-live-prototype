@@ -1,0 +1,39 @@
+{
+  "batch": "03",
+  "date": "2026-11-09",
+  "status": "received_unannotated",
+  "annotation_target": "outer_existing_frame_and_trim",
+  "images": [
+    {
+      "file": "IMG_9683.jpeg",
+      "group": "utility_storage_frame",
+      "state": "closed",
+      "note": "white utility door; adjacent second door must not be confused with target"
+    },
+    {
+      "file": "IMG_9682.jpeg",
+      "group": "utility_storage_frame",
+      "state": "open_or_leaf_not_visible",
+      "note": "same storage doorway; fixed outer frame is target"
+    },
+    {
+      "file": "IMG_9680.jpeg",
+      "group": "entrance_5",
+      "state": "closed",
+      "note": "wood door and white trim; paired with previous open-door example"
+    },
+    {
+      "file": "IMG_9681.jpeg",
+      "group": "utility_storage_frame",
+      "state": "ajar",
+      "note": "same storage frame; swinging leaf must be ignored"
+    }
+  ],
+  "validation_rules": [
+    "Annotations must use TL,TR,BR,BL of fixed outer trim",
+    "Split train/validation by physical doorway, not photo",
+    "Labels must be reviewed before training",
+    "No annotated overlay images used as model inputs"
+  ],
+  "note": "Images are uploaded in conversation, not committed as binaries to repository; group labels provisional."
+}
