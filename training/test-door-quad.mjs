@@ -1,0 +1,11 @@
+import {validateDoorQuad,canProjectDoor} from '../ai/door-quad-validation.js';
+import assert from 'node:assert/strict';
+const ok=[[70,30],[220,48],[200,290],[80,310]];
+assert.equal(validateDoorQuad(ok,320,360).valid,true);
+assert.equal(validateDoorQuad([[70,30],[220,48],[80,310],[200,290]],320,360).valid,false);
+assert.equal(validateDoorQuad([[70,30],[220,48],[220,48],[80,310]],320,360).valid,false);
+assert.equal(validateDoorQuad([[-1,30],[220,48],[200,290],[80,310]],320,360).valid,false);
+assert.equal(canProjectDoor({corners:ok,width:320,height:360,geometryVerified:false,score:0.99}).valid,false);
+assert.equal(canProjectDoor({corners:ok,width:320,height:360,geometryVerified:true,score:0.4}).valid,false);
+assert.equal(canProjectDoor({corners:ok,width:320,height:360,geometryVerified:true,score:0.9}).valid,true);
+console.log('Door quad geometry tests passed');
