@@ -1,0 +1,62 @@
+{
+  "schema_version": 2,
+  "description": "Example only; no coordinates from actual photos",
+  "keypoint_order": [
+    "top_left",
+    "top_right",
+    "bottom_right",
+    "bottom_left"
+  ],
+  "images": [
+    {
+      "file": "example.jpg",
+      "width": 1200,
+      "height": 1600,
+      "rights": "owned",
+      "location_group": "site_a_door_1",
+      "instances": [
+        {
+          "category": "doorway_frame",
+          "opening_state": "ajar",
+          "frame_visibility": "partially_occluded",
+          "frame_type": "visible_trim",
+          "keypoints_xy": [
+            [
+              200,
+              180
+            ],
+            [
+              950,
+              210
+            ],
+            [
+              920,
+              1460
+            ],
+            [
+              225,
+              1440
+            ]
+          ],
+          "visible": [
+            1,
+            1,
+            0,
+            1
+          ],
+          "corner_confidence": [
+            1,
+            1,
+            0.4,
+            1
+          ],
+          "annotation_plane": "inner_clear_opening",
+          "verified": false
+        }
+      ],
+      "negatives": [
+        "window"
+      ]
+    }
+  ]
+}
