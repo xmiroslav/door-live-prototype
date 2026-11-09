@@ -1,0 +1,192 @@
+{
+  "schema_version": 3,
+  "coordinate_system": "pixels_in_500x889_user_markup_images",
+  "keypoint_order": [
+    "top_left",
+    "top_right",
+    "bottom_right",
+    "bottom_left"
+  ],
+  "installation_target": "outer_visible_existing_frame_including_trim",
+  "selected_door_includes": "leaf,frame,architraves,handle,glass,finish",
+  "rendering": "Overlay entire selected door assembly over existing door/frame, matching outer footprint and perspective. Preserve native proportions; do not stretch. Adjust for product trim geometry.",
+  "verified": false,
+  "note": "Approximate points digitized from user red markup. Must transfer to clean originals and verify before training.",
+  "images": [
+    {
+      "file": "IMG_9509(4)_door_draft.jpg",
+      "width": 500,
+      "height": 889,
+      "keypoints_xy": [
+        [
+          231,
+          245
+        ],
+        [
+          398,
+          261
+        ],
+        [
+          369,
+          620
+        ],
+        [
+          225,
+          623
+        ]
+      ],
+      "annotation_plane": "outer_existing_frame_and_trim",
+      "verified": false
+    },
+    {
+      "file": "IMG_9528(3)_door_draft.jpg",
+      "width": 500,
+      "height": 889,
+      "keypoints_xy": [
+        [
+          102,
+          157
+        ],
+        [
+          404,
+          159
+        ],
+        [
+          370,
+          749
+        ],
+        [
+          124,
+          749
+        ]
+      ],
+      "annotation_plane": "outer_existing_frame_and_trim",
+      "verified": false
+    },
+    {
+      "file": "IMG_9529(2)_door_draft.jpg",
+      "width": 500,
+      "height": 889,
+      "keypoints_xy": [
+        [
+          88,
+          116
+        ],
+        [
+          397,
+          47
+        ],
+        [
+          375,
+          861
+        ],
+        [
+          126,
+          747
+        ]
+      ],
+      "annotation_plane": "outer_existing_frame_and_trim",
+      "verified": false
+    },
+    {
+      "file": "IMG_9659_door_draft.jpg",
+      "width": 500,
+      "height": 889,
+      "keypoints_xy": [
+        [
+          122,
+          16
+        ],
+        [
+          461,
+          47
+        ],
+        [
+          415,
+          821
+        ],
+        [
+          144,
+          835
+        ]
+      ],
+      "annotation_plane": "outer_existing_frame_and_trim",
+      "verified": false
+    },
+    {
+      "file": "IMG_9660_door_draft.jpg",
+      "width": 500,
+      "height": 889,
+      "keypoints_xy": [
+        [
+          80,
+          113
+        ],
+        [
+          256,
+          168
+        ],
+        [
+          249,
+          691
+        ],
+        [
+          108,
+          782
+        ]
+      ],
+      "annotation_plane": "outer_existing_frame_and_trim",
+      "verified": false
+    },
+    {
+      "file": "IMG_9661_door_draft.jpg",
+      "width": 500,
+      "height": 889,
+      "keypoints_xy": [
+        [
+          149,
+          293
+        ],
+        [
+          287,
+          285
+        ],
+        [
+          297,
+          605
+        ],
+        [
+          178,
+          607
+        ]
+      ],
+      "annotation_plane": "outer_existing_frame_and_trim",
+      "verified": false
+    },
+    {
+      "file": "IMG_9662_door_draft.jpg",
+      "width": 500,
+      "height": 889,
+      "keypoints_xy": [
+        [
+          131,
+          80
+        ],
+        [
+          350,
+          148
+        ],
+        [
+          324,
+          705
+        ],
+        [
+          143,
+          802
+        ]
+      ],
+      "annotation_plane": "outer_existing_frame_and_trim",
+      "verified": false
+    }
+  ]
+}
