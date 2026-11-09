@@ -1,0 +1,86 @@
+{
+  "batch": "02",
+  "date": "2026-11-09",
+  "status": "received_unannotated",
+  "target": "outer_existing_frame_and_trim",
+  "coordinate_order": [
+    "top_left",
+    "top_right",
+    "bottom_right",
+    "bottom_left"
+  ],
+  "image_size": [
+    864,
+    1536
+  ],
+  "images": [
+    {
+      "file": "IMG_9693.jpeg",
+      "group": "brown_door_A",
+      "state": "closed",
+      "notes": "full door and dark trim"
+    },
+    {
+      "file": "IMG_9692.jpeg",
+      "group": "brown_door_A",
+      "state": "closed",
+      "notes": "same door closer view"
+    },
+    {
+      "file": "IMG_9688.jpeg",
+      "group": "entrance_5",
+      "state": "open",
+      "notes": "white trim; target frame not swinging door leaf"
+    },
+    {
+      "file": "IMG_9689.jpeg",
+      "group": "brown_door_B",
+      "state": "ajar",
+      "notes": "dark trim; side perspective"
+    },
+    {
+      "file": "IMG_9690.jpeg",
+      "group": "brown_door_B",
+      "state": "closed",
+      "notes": "same door, frontal"
+    },
+    {
+      "file": "IMG_9687.jpeg",
+      "group": "light_entrance_3",
+      "state": "closed",
+      "notes": "white trim, lower contrast"
+    },
+    {
+      "file": "IMG_9686.jpeg",
+      "group": "utility_door_A",
+      "state": "closed",
+      "notes": "white on white; oblique view"
+    },
+    {
+      "file": "IMG_9685.jpeg",
+      "group": "utility_door_A",
+      "state": "closed",
+      "notes": "same style utility door, oblique; verify physical identity"
+    },
+    {
+      "file": "IMG_9684.jpeg",
+      "group": "utility_door_A",
+      "state": "closed",
+      "notes": "white on white; hallway, second doorway present"
+    },
+    {
+      "file": "IMG_9691.jpeg",
+      "group": "brown_door_B",
+      "state": "closed",
+      "notes": "same door as 9690, different view"
+    }
+  ],
+  "rules": [
+    "No model training until human-verified four-corner labels exist",
+    "Original images are not stored in this GitHub text manifest",
+    "Split train/test by physical doorway group, not by photo",
+    "Door installation plane is outside trim, not moving leaf",
+    "Multi-door image requires distinct instance annotations"
+  ],
+  "note": "Image groups are provisional visual classifications and must be confirmed before train/test splitting."
+}
