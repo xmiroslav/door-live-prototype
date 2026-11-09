@@ -1,0 +1,5 @@
+# Experiment 002 — 14 new photos (2026-11-09)
+
+**Actually trained** a small CPU PyTorch CNN from scratch on 12 of 14 newly supplied photos with *provisional* manually estimated TL/TR/BR/BL outer-frame annotations; 2 photos held out by provisional doorway group (light3, utilityC). 90 epochs; best epoch 33; held-out mean corner distance **8.93 pixels at 96×160**. This is a tiny, biased validation and **not a reliable accuracy estimate**. Annotations are not human verified. The previous 7 photos were not incorporated into this training run; 21 is the total inventory, not the training count.
+
+**Not MediaPipe / not TFLite.** Checkpoint is experimental PyTorch only, no live AI mode enabled. The existing Door Live detector and site remain unchanged. Training source, weights, full provisional labels, and contact sheet are in the downloadable experiment ZIP in the ChatGPT conversation. Next: verify label corners, expand unique doorway groups, train a commercial-license-cleared model, export to TFLite, test browser inference on iPhone and Android.
