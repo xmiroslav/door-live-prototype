@@ -1,0 +1,7 @@
+# Experiment 003 — corrected-label perspective augmentation (2026-11-10)
+
+Actually executed 100 epochs of a CPU PyTorch convolutional four-corner regressor at 128×224, with projective image+keypoint augmentation and scale-independent normalized labels. 10 training photos; 4 held-out photos from 3 physical doorway groups (brown_A, light3, utilityC). Best validation mean corner error: **15.87 pixels at 128×224**, epoch 15. Previous experiment's 8.93px at 96×160 is **not directly comparable**: different input resolution and validation groups.
+
+Corrected labels from user red contact sheet were used for IMG_9688, IMG_9687, IMG_9686, IMG_9684, but coordinate transcription remains provisional and unverified at full resolution. Four held-out photos were not seen during training, though some labels remain inaccurate. Actual visual result shows perspective failure, especially IMG_9684, and excess floor IMG_9687. This model **does not reliably recognize doors yet**.
+
+Artifacts in conversation: `door_live_ai_corrected_experiment.zip` (PyTorch checkpoint, training script, annotation JSON, report, prediction contact sheet). Not deployed. No TFLite export, MediaPipe browser integration, or iPhone/Android validation. Existing heuristic mode remains untouched. Next milestone: verified keypoints and architecture using a dedicated door candidate detector + corner head; test with more unique physical doors and negative examples.
