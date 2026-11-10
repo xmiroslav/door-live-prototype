@@ -1,0 +1,12 @@
+{
+  "status": "transcribed_from_user_red_montage_pending_full_resolution_verification",
+  "coordinate_order": ["TL","TR","BR","BL"],
+  "image_size": [864,1536],
+  "images": [
+    {"file":"IMG_9688.jpeg","group":"entrance_5","keypoints_xy":[[160,284],[708,284],[624,1364],[228,1356]],"annotation_plane":"outer_existing_frame_and_trim","verified":false},
+    {"file":"IMG_9687.jpeg","group":"light_entrance_3","keypoints_xy":[[256,188],[724,212],[612,1068],[280,1060]],"annotation_plane":"outer_existing_frame_and_trim","verified":false},
+    {"file":"IMG_9686.jpeg","group":"utility_door_A","keypoints_xy":[[244,136],[852,72],[716,1535],[176,1384]],"annotation_plane":"outer_existing_frame_and_trim","verified":false,"note":"Bottom-right red contour at montage boundary; recheck against original"},
+    {"file":"IMG_9684.jpeg","group":"utility_door_A","keypoints_xy":[[300,300],[540,420],[516,1228],[296,1376]],"annotation_plane":"outer_existing_frame_and_trim","verified":false}
+  ],
+  "note":"User red strokes supersede green labels. Coordinates are manual montage-to-original transcription, not final verified labels. Do not use as production ground truth."
+}
