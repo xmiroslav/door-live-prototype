@@ -8,8 +8,8 @@ a{color:#126d61}.wrap{max-width:720px;margin:auto;padding:12px}.notice{backgroun
 button,.upload{border:0;background:#17685c;color:#fff;border-radius:12px;padding:12px 15px;font:600 14px system-ui;cursor:pointer}
 .upload{display:inline-block}input[type=file]{display:none}.controls{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
 button.secondary{background:#fff;color:#17685c;border:1px solid #b6d2ca}
-button:disabled{opacity:.4}.scene{position:relative;background:#263b36;border-radius:12px;overflow:hidden;touch-action:none;min-height:220px}
-canvas{display:block;width:100%;height:auto;touch-action:none}
+button:disabled{opacity:.4}.scene{position:relative;background:#263b36;border-radius:12px;overflow:hidden;touch-action:pan-y;min-height:220px}
+canvas{display:block;width:100%;height:auto;touch-action:pan-y}
 #status{margin:12px 0;min-height:25px;font-size:13px}small{color:#546d67}
 /* Match the existing Door Live layout and colors on phones. */
 body{background:linear-gradient(145deg,#e8efec,#f6f0ef);color:#173c3a}
@@ -23,6 +23,7 @@ header a{color:#b96670;text-decoration:none;border:1px solid #b8d3cc;border-radi
 .controls button.secondary{background:#fff;color:#173c3a;border:1px solid #cbd9d5}
 .controls button:disabled{opacity:.55}
 .scene{background:#172b2a;border-radius:20px}
+.scene.editing,.scene.editing canvas{touch-action:none}
 .scene video{display:none}
 .scene video[hidden]{display:none}
 .scene:has(video:not([hidden])) canvas{position:relative}
@@ -30,13 +31,13 @@ header a{color:#b96670;text-decoration:none;border:1px solid #b8d3cc;border-radi
 #status{background:#fff;border-radius:12px;padding:11px 13px;line-height:1.5}
 @media(max-width:390px){.controls button,.controls .upload{font-size:12px}}
 </style></head><body>
-<header><strong>DOOR <span style="color:#cd8080">LIVE</span> <small style="color:#617b77">TEST 88 — ניסוי חדש</small></strong><a href="./index.html">חזרה לגרסה הקיימת</a></header>
+<header><strong>DOOR <span style="color:#cd8080">LIVE</span> <small style="color:#617b77">TEST 89 — ניסוי חדש</small></strong><a href="./index.html">חזרה לגרסה הקיימת</a></header>
 <div class="wrap">
 <div class="notice"><strong>ניסוי חדש — תמונה ומצלמה חיה.</strong> זיהוי אוטומטי עדיין מבוסס על האלגוריתם הישן, ולא על מודל MediaPipe מאומן. אם הזיהוי נכשל, אפשר לסמן ארבע פינות חיצוניות ידנית. המערכת הקיימת לא משתנה.</div>
-<div class="controls"><button id="camera">פתיחת מצלמה חיה</button><button id="stopCamera" class="secondary" disabled>עצירת מצלמה</button><label class="upload">העלאת תמונה<input id="file" type="file" accept="image/*"></label><button id="auto" disabled>חיפוש מסגרת (ניסיוני)</button><button id="manual" class="secondary" disabled>סימון 4 פינות</button><button id="overlay" class="secondary" disabled>הצג / הסתר דלת</button><button id="reset" class="secondary" disabled>אפס נקודות</button></div>
+<div class="controls"><button id="camera">פתיחת מצלמה חיה</button><button id="stopCamera" class="secondary" disabled>עצירת מצלמה</button><label class="upload">העלאת תמונה<input id="file" type="file" accept="image/*"></label><button id="auto" disabled>חיפוש מסגרת (ניסיוני)</button><button id="manual" class="secondary" disabled>סימון 4 פינות</button><button id="overlay" class="secondary" disabled>הצג / הסתר דלת</button><button id="reset" class="secondary" disabled>אפס נקודות</button><button id="editMode" class="secondary" disabled aria-pressed="false">עריכת נקודות: כבוי</button></div>
 <div class="scene"><video id="liveVideo" autoplay muted playsinline hidden></video><canvas id="canvas"></canvas></div>
 <div id="status" role="status">בחר תמונה להתחלה</div>
-<small>גרור את הנקודות הירוקות כדי להתאים את המסגרת החיצונית, כולל ההלבשות. התמונה והמצלמה מעובדות בדפדפן. מעקב פינות ניסיוני לפי שינויי תמונה פועל במצלמה; זה אינו עיגון AR תלת-ממדי ואינו AI מאומן. התוצאה להמחשה בלבד.</small>
+<small>להזזת הנקודות הירוקות הפעל קודם עריכת נקודות; בסיום כבה עריכה כדי לגלול. גרור את הנקודות כדי להתאים את המסגרת החיצונית, כולל ההלבשות. התמונה והמצלמה מעובדות בדפדפן. מעקב פינות ניסיוני לפי שינויי תמונה פועל במצלמה; זה אינו עיגון AR תלת-ממדי ואינו AI מאומן. התוצאה להמחשה בלבד.</small>
 </div>
 <script src="./door-projector.js"></script>
 <script src="./door-corner-tracker.js"></script>
@@ -44,6 +45,8 @@ header a{color:#b96670;text-decoration:none;border:1px solid #b8d3cc;border-radi
 const $=id=>document.getElementById(id),canvas=$('canvas'),ctx=canvas.getContext('2d');
 let image=null,quad=null,original=null,showDoor=true,drag=-1,worker=null,requestId=0,stream=null,live=false,raf=0,lastAuto=0,detectBusy=false,lastTrack=0,trackLost=false;
 const cornerTracker=new window.DoorCornerTracker();
+let editing=false;function setEditing(on){editing=!!on;document.querySelector('.scene').classList.toggle('editing',editing);$('editMode').setAttribute('aria-pressed',String(editing));$('editMode').textContent=editing?'סיום עריכה — גלילה רגילה':'עריכת נקודות: כבוי'}
+$('editMode').onclick=()=>setEditing(!editing);
 const door=new Image();
 door.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="300" height="650" viewBox="0 0 300 650"><rect width="300" height="650" fill="#d4c9b3"/><rect x="12" y="12" width="276" height="626" fill="#543e33"/><rect x="27" y="24" width="246" height="602" fill="#8c634b"/><rect x="48" y="50" width="204" height="250" fill="none" stroke="#c9a37d" stroke-width="7"/><rect x="48" y="340" width="204" height="260" fill="none" stroke="#c9a37d" stroke-width="7"/><circle cx="235" cy="335" r="8" fill="#e4c78d"/></svg>');
 const projector=(()=>{try{return new window.DoorProjector()}catch{return null}})();
@@ -56,21 +59,21 @@ quad.forEach((p,i)=>{ctx.beginPath();ctx.arc(...p,Math.max(7,canvas.width/90),0,
 door.onload=draw;
 function setStatus(msg){$('status').textContent=msg}
 $('file').onchange=async e=>{const f=e.target.files[0];if(!f)return;stopLive();requestId++;if(worker){worker.terminate();worker=null}const url=URL.createObjectURL(f),im=new Image();
-try{await new Promise((resolve,reject)=>{im.onload=resolve;im.onerror=reject;im.src=url});image=im;const scale=Math.min(1,1200/Math.max(im.naturalWidth,im.naturalHeight));canvas.width=Math.round(im.naturalWidth*scale);canvas.height=Math.round(im.naturalHeight*scale);quad=null;original=null;showDoor=true;['auto','manual','overlay','reset'].forEach(id=>$(id).disabled=false);setStatus('התמונה מוכנה. לחץ על זיהוי אוטומטי או קבע ארבע פינות ידנית.');draw()}catch{setStatus('לא ניתן לפתוח את התמונה')}finally{URL.revokeObjectURL(url)}};
+try{await new Promise((resolve,reject)=>{im.onload=resolve;im.onerror=reject;im.src=url});image=im;const scale=Math.min(1,1200/Math.max(im.naturalWidth,im.naturalHeight));canvas.width=Math.round(im.naturalWidth*scale);canvas.height=Math.round(im.naturalHeight*scale);quad=null;original=null;showDoor=true;setEditing(false);['auto','manual','overlay','reset','editMode'].forEach(id=>$(id).disabled=false);setStatus('התמונה מוכנה. לחץ על זיהוי אוטומטי או קבע ארבע פינות ידנית.');draw()}catch{setStatus('לא ניתן לפתוח את התמונה')}finally{URL.revokeObjectURL(url)}};
 function grayInput(){const w=320,h=480,off=document.createElement('canvas');off.width=w;off.height=h;const c=off.getContext('2d',{willReadFrequently:true});c.fillStyle='rgb(127,127,127)';c.fillRect(0,0,w,h);const s=Math.min(w/canvas.width,h/canvas.height),dw=canvas.width*s,dh=canvas.height*s,ox=(w-dw)/2,oy=(h-dh)/2;c.drawImage(live?$('liveVideo'):image,ox,oy,dw,dh);const d=c.getImageData(0,0,w,h).data,g=new Uint8Array(w*h);for(let i=0;i<g.length;i++)g[i]=Math.round(.299*d[i*4]+.587*d[i*4+1]+.114*d[i*4+2]);return {g,w,h,ox,oy,dw,dh}}
 $('auto').onclick=()=>{if(!image&&!live)return;const {g,w,h,ox,oy,dw,dh}=grayInput();$('auto').disabled=true;setStatus('מחפש מסגרת…');
 if(worker)worker.terminate();worker=new Worker('./door-detector-worker.js');const id=++requestId;worker.onmessage=e=>{if(e.data.id!==id)return;$('auto').disabled=false;worker.terminate();worker=null;
 if(!e.data.quad){setStatus('לא נמצאה מסגרת אמינה. אפשר לקבוע ארבע פינות ידנית.');return}
 const candidate=e.data.quad.map(([x,y])=>[(x-ox)/dw*canvas.width,(y-oy)/dh*canvas.height]);
 if(candidate.some(p=>p[0]<0||p[1]<0||p[0]>canvas.width||p[1]>canvas.height)){setStatus('הזיהוי חרג מהתמונה. יש לסמן פינות ידנית.');return}
-if(!isValidQuad(candidate)){setStatus('המתאר שנמצא אינו יציב. סמנו ארבע פינות ידנית.');return}quad=candidate;original=quad.map(p=>p.slice());if(live){cornerTracker.setQuad(quad,canvas.width,canvas.height,$('liveVideo'));trackLost=false}draw();setStatus(live?'זוהה מתאר משוער. מעקב תנועה ניסיוני פעיל; בדקו את ארבע הפינות.':'נמצא מתאר משוער. יש לבדוק ולתקן את ארבע הפינות. זה אינו זיהוי AI.')};
+if(!isValidQuad(candidate)){setStatus('המתאר שנמצא אינו יציב. סמנו ארבע פינות ידנית.');return}quad=candidate;original=quad.map(p=>p.slice());setEditing(false);if(live){cornerTracker.setQuad(quad,canvas.width,canvas.height,$('liveVideo'));trackLost=false}draw();setStatus(live?'זוהה מתאר משוער. מעקב תנועה ניסיוני פעיל; בדקו את ארבע הפינות.':'נמצא מתאר משוער. יש לבדוק ולתקן את ארבע הפינות. זה אינו זיהוי AI.')};
 worker.onerror=()=>{$('auto').disabled=false;setStatus('שגיאת זיהוי. ניתן לסמן ידנית.')};
 worker.postMessage({id,epoch:1,mode:'photo',buffer:g.buffer,w,h,still:true},[g.buffer])};
 $('overlay').onclick=()=>{showDoor=!showDoor;draw()};$('reset').onclick=()=>{quad=original?original.map(p=>p.slice()):null;draw()};
-$('manual').onclick=()=>{if(!image&&!live)return;quad=[];original=null;showDoor=false;draw();setStatus('סמנו 4 פינות של המסגרת החיצונית, כולל ההלבשות: שמאל למעלה, ימין למעלה, ימין למטה, שמאל למטה.')};
+$('manual').onclick=()=>{if(!image&&!live)return;quad=[];original=null;showDoor=false;setEditing(true);draw();setStatus('סמנו 4 פינות של המסגרת החיצונית, כולל ההלבשות: שמאל למעלה, ימין למעלה, ימין למטה, שמאל למטה.')};
 function isValidQuad(q){if(!Array.isArray(q)||q.length!==4)return false;const cross=(a,b,c)=>(b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0]);const z=q.map((p,i)=>cross(p,q[(i+1)%4],q[(i+2)%4]));const area=Math.abs(q.reduce((s,p,i)=>s+p[0]*q[(i+1)%4][1]-q[(i+1)%4][0]*p[1],0))/2;return z.every(v=>v>0)||z.every(v=>v<0)?area>canvas.width*canvas.height*.025&&q.every(p=>p[0]>=0&&p[1]>=0&&p[0]<=canvas.width&&p[1]<=canvas.height):false}
 function point(e){const r=canvas.getBoundingClientRect();return [(e.clientX-r.left)/r.width*canvas.width,(e.clientY-r.top)/r.height*canvas.height]}
-canvas.addEventListener('pointerdown',e=>{if(!image&&!live)return;const p=point(e),radius=Math.max(24,canvas.width/20);drag=quad?quad.findIndex(q=>Math.hypot(q[0]-p[0],q[1]-p[1])<radius):-1;
+canvas.addEventListener('pointerdown',e=>{if((!image&&!live)||!editing)return;const p=point(e),radius=Math.max(24,canvas.width/20);drag=quad?quad.findIndex(q=>Math.hypot(q[0]-p[0],q[1]-p[1])<radius):-1;
 if(drag<0&&(!quad||quad.length===0)){quad=[p];drag=0;setStatus('בחר ארבע פינות: שמאל למעלה, ימין למעלה, ימין למטה, שמאל למטה.')}
 else if(drag<0&&quad.length<4){quad.push(p);drag=quad.length-1}
 if(drag>=0)canvas.setPointerCapture(e.pointerId);draw()});
@@ -80,7 +83,7 @@ canvas.addEventListener('pointerup',()=>{drag=-1;if(quad?.length===4){showDoor=t
 function stopLive(){
  live=false;cancelAnimationFrame(raf);cornerTracker.reset();requestId++;if(worker){worker.terminate();worker=null}if($('auto'))$('auto').disabled=!image;
  if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}
- const v=$('liveVideo');v.pause();v.srcObject=null;v.hidden=true;
+ setEditing(false);const v=$('liveVideo');v.pause();v.srcObject=null;v.hidden=true;
  $('stopCamera').disabled=true;$('camera').disabled=false;
 }
 function liveLoop(t){
@@ -97,9 +100,9 @@ $('camera').onclick=async()=>{
   const v=$('liveVideo');v.srcObject=stream;await v.play();
   await new Promise(resolve=>{if(v.videoWidth)return resolve();v.onloadedmetadata=resolve});
   canvas.width=v.videoWidth||720;canvas.height=v.videoHeight||1280;
-  image=null;quad=null;original=null;showDoor=true;live=true;trackLost=false;cornerTracker.reset();
+  image=null;quad=null;original=null;showDoor=true;setEditing(false);live=true;trackLost=false;cornerTracker.reset();
   $('stopCamera').disabled=false;$('camera').disabled=true;
-  ['auto','manual','overlay','reset'].forEach(id=>$(id).disabled=false);
+  ['auto','manual','overlay','reset','editMode'].forEach(id=>$(id).disabled=false);
   setStatus('מצלמה חיה פעילה. מתחיל חיפוש מסגרת אוטומטי; אם נכשל אפשר לסמן ארבע פינות. העיגון למרחב עדיין בפיתוח.');
   raf=requestAnimationFrame(liveLoop);
   setTimeout(()=>{if(live&&!quad&&!document.hidden&&!$('auto').disabled)$('auto').click()},650);
