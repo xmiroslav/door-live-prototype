@@ -8,8 +8,8 @@ a{color:#126d61}.wrap{max-width:720px;margin:auto;padding:12px}.notice{backgroun
 button,.upload{border:0;background:#17685c;color:#fff;border-radius:12px;padding:12px 15px;font:600 14px system-ui;cursor:pointer}
 .upload{display:inline-block}input[type=file]{display:none}.controls{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
 button.secondary{background:#fff;color:#17685c;border:1px solid #b6d2ca}
-button:disabled{opacity:.4}.scene{position:relative;background:#263b36;border-radius:12px;overflow:hidden;touch-action:pan-y;min-height:220px}
-canvas{display:block;width:100%;height:auto;touch-action:pan-y}
+button:disabled{opacity:.4}.scene{position:relative;background:#263b36;border-radius:12px;overflow:hidden;touch-action:pan-y pinch-zoom;min-height:220px}
+canvas{display:block;width:100%;height:auto;touch-action:pan-y pinch-zoom}
 #status{margin:12px 0;min-height:25px;font-size:13px}small{color:#546d67}
 /* Match the existing Door Live layout and colors on phones. */
 body{background:linear-gradient(145deg,#e8efec,#f6f0ef);color:#173c3a}
@@ -83,8 +83,9 @@ canvas.addEventListener('pointerdown',e=>{if(!image&&!live)return;touches.set(e.
 if(drag<0&&(!quad||quad.length===0)){quad=[p];drag=0;setStatus('בחר ארבע פינות: שמאל למעלה, ימין למעלה, ימין למטה, שמאל למטה.')}
 else if(drag<0&&quad.length<4){quad.push(p);drag=quad.length-1}
 if(drag>=0)canvas.setPointerCapture(e.pointerId);draw()});
-canvas.addEventListener('pointermove',e=>{if(touches.has(e.pointerId))touches.set(e.pointerId,[e.clientX,e.clientY]);if(touches.size===2&&pinch){setZoom(pinch.zoom*pinchDistance()/Math.max(1,pinch.distance));return}if(drag<0||!quad)return;const p=point(e);quad[drag]=[Math.max(0,Math.min(canvas.width,p[0])),Math.max(0,Math.min(canvas.height,p[1]))];if(quad.length===4)draw();else{if(live)ctx.drawImage($('liveVideo'),0,0,canvas.width,canvas.height);else ctx.drawImage(image,0,0,canvas.width,canvas.height);quad.forEach(q=>{ctx.beginPath();ctx.arc(...q,8,0,Math.PI*2);ctx.fillStyle='#12d39c';ctx.fill()})}});
-canvas.addEventListener('pointerup',e=>{touches.delete(e.pointerId);if(touches.size<2)pinch=null;drag=-1;if(quad?.length===4){showDoor=true;if(live&&tracking){cornerTracker.setQuad(quad,canvas.width,canvas.height,$('liveVideo'));trackLost=false}setStatus('אפשר לגרור כל פינה ולבדוק את ההלבשה.');draw()}});
+canvas.addEventListener('pointermove',e=>{if(touches.has(e.pointerId))touches.set(e.pointerId,[e.clientX,e.clientY]);if(touches.size===2&&pinch){setZoom(pinch.zoom*pinchDistance()/Math.max(1,pinch.distance));return}if(drag<0||!quad)return;const p=point(e);quad[drag]=[Math.max(0,Math.min(canvas.width,p[0])),Math.max(0,Math.min(canvas.height,p[1]))];draw()});
+canvas.addEventListener('pointercancel',e=>{touches.delete(e.pointerId);pinch=null;drag=-1});
+canvas.addEventListener('pointerup',e=>{touches.delete(e.pointerId);if(touches.size<2)pinch=null;drag=-1;if(quad?.length===4){if(!isValidQuad(quad)){showDoor=false;setStatus('ארבע הפינות אינן יוצרות מסגרת תקינה. הזיזו אותן לפי הסדר.');draw();return}showDoor=true;if(live&&tracking){cornerTracker.setQuad(quad,canvas.width,canvas.height,$('liveVideo'));trackLost=false}setStatus('אפשר לגרור כל פינה ולבדוק את ההלבשה.');draw()}});
 
 function stopLive(){
  setTracking(false);live=false;cancelAnimationFrame(raf);cornerTracker.reset();requestId++;if(worker){worker.terminate();worker=null}if($('auto'))$('auto').disabled=!image;
