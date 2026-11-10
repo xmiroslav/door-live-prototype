@@ -78,7 +78,7 @@ canvas.addEventListener('pointermove',e=>{if(drag<0||!quad)return;const p=point(
 canvas.addEventListener('pointerup',()=>{drag=-1;if(quad?.length===4){showDoor=true;if(live){cornerTracker.setQuad(quad,canvas.width,canvas.height,$('liveVideo'));trackLost=false}setStatus('אפשר לגרור כל פינה ולבדוק את ההלבשה.');draw()}});
 
 function stopLive(){
- live=false;cancelAnimationFrame(raf);cornerTracker.reset();
+ live=false;cancelAnimationFrame(raf);cornerTracker.reset();requestId++;if(worker){worker.terminate();worker=null}if($('auto'))$('auto').disabled=!image;
  if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}
  const v=$('liveVideo');v.pause();v.srcObject=null;v.hidden=true;
  $('stopCamera').disabled=true;$('camera').disabled=false;
