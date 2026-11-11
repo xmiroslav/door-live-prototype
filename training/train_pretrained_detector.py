@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Fine-tune torchvision Faster R-CNN MobileNetV3-320 COCO pretrained weights on door-frame boxes.
+LEGACY research path, not the approved architecture. Use train_yolox.py for the current YOLOX-Nano path.
 Research-only until labels, license, holdout metrics and browser runtime are verified.
 Requires pip install torch torchvision pillow and local compatible licensed weights.
 """

@@ -1,5 +1,7 @@
 # Door Live AI — Ground truth, detection and projection specification
-Version 1.0 — 2026-11-09
+Version 1.1 — 2026-11-11
+
+Authority: `docs/LOCAL_AI_DELIVERY_CONTRACT.md`. The approved target is the outer fixed frame including trim. Earlier inner-opening labels are not interchangeable.
 
 ## Goal
 Identify the *fixed architectural doorway* (jamb/frame/opening), not the moving door leaf, and project the exact selected Unidoors door into its plane. This document specifies desired behavior, **not** a trained model.
@@ -14,12 +16,12 @@ Identify the *fixed architectural doorway* (jamb/frame/opening), not the moving 
 
 ## Four corners
 Always annotate **TL, TR, BR, BL** in original unmirrored image coordinates, clockwise. These refer to the same *fixed planar installation boundary*, consistently across all images.
-- TL: intersection of left fixed jamb and top fixed lintel.
-- TR: intersection of right fixed jamb and top fixed lintel.
-- BR: right fixed jamb at the finished-floor/threshold line.
-- BL: left fixed jamb at the finished-floor/threshold line.
+- TL: top-left external corner of the fixed frame including casing / trim.
+- TR: top-right external corner of the fixed frame including casing / trim.
+- BR: lower-right external edge of fixed casing at the finished-floor/threshold line.
+- BL: lower-left external edge of fixed casing at the finished-floor/threshold line.
 - The opening is a quadrilateral in the camera image. Do not force it to an axis-aligned rectangle or assume equal pixel lengths.
-- The *installation plane* may be the inner jamb opening or outside edge of fixed trim depending on the selected Unidoors door's installation specification. Do not mix these conventions in training. Default annotation is **inner clear opening**; record outer trim as optional second quad. Calibration/fit parameters for selected door must use matching dimensions.
+- The annotation target is **outside edge of the fixed frame including trim**. Do not substitute inner clear opening or moving leaf corners. If the selected door graphic uses another boundary, record an explicit source-asset calibration; never change the ground truth to fit that asset.
 - If a corner is occluded by an open door leaf, label the **inferred** corner and set visibility=0; do not label the leaf edge instead.
 - If the bottom is outside the image, mark bottom points unobservable; **do not fabricate precise ground truth**. Such images may be used for detection, but not full four-point supervised loss without explicit visibility masking.
 - If frame is not confidently visible, label uncertainty and allow manual user correction.
@@ -41,7 +43,7 @@ Augment modestly with brightness, white balance, blur, perspective and realistic
 Prioritize more distinct locations and negative examples over dozens of near-identical frames.
 
 ## Model and browser execution
-- Candidate architecture: Apache-2.0 MediaPipe Tasks Vision object detector + a separate trained four-keypoint model or geometry refiner. **MediaPipe ObjectDetector returns bounding boxes, not 4 corners**.
+- Approved architecture: YOLOX-Nano candidate detector + separate four-keypoint model + ONNX Runtime Web. Detector boxes are not installation corners. Exact pretrained-checkpoint permission remains a separate gate.
 - Choose only weights whose **specific checkpoint** is cleared for commercial use. Track hash, upstream license, and training-data provenance.
 - CPU/WASM on Safari and Android Chrome, with mobile memory/thermal benchmarking. No cloud per-frame API required.
 - Maintain existing classical detector and manual adjustment as reliable fallback; never silently substitute a bounding box for a perspective quad.
@@ -60,7 +62,7 @@ Prioritize more distinct locations and negative examples over dozens of near-ide
 
 ## Acceptance criteria — must be measured on held-out real device tests
 - Initial detection target <= 4 seconds after camera is ready, including model initialization separately reported.
-- Corner accuracy measured against manually verified inner-opening annotations, including perspective and low contrast.
+- Corner accuracy measured against manually verified outer-frame-including-trim annotations, including perspective and low contrast.
 - False positives evaluated on windows, closets, mirrors and coat racks.
 - Stable tracking while walking and panning; report drift and relocalization failures.
 - Compare original and AI engines on the *same* scenes. Keep both modes available.

@@ -9,12 +9,19 @@ This document separates **code license, pretrained weights, dataset license and 
 - **Fit:** light architecture, ONNX support; fine-tune on licensed door/window photos, then train separate four-corner model.
 - **Status:** baseline architecture approved for research; not a trained door detector and not legally approved for product weights.
 
-## Training data: Roboflow Universe Door-Windows
+## Rejected data source: Roboflow Universe Door-Windows (visual check 2026-11-11)
 - Dataset: https://universe.roboflow.com/doorswindows/door-windows/dataset/1
-- Page reports **CC BY 4.0**; version lists 9,689 generated/export images (6,087 train; 2,025 val; 1,577 test), detection classes: door, window, wall, stairs.
-- License requires attribution; must inspect dataset provenance and any third-party restrictions before commercial training. Test whether export is accessible; no API key should be added to repository.
-- **Do not use hosted Roboflow 3.0 model weights/API as final inference infrastructure**; hosted model licensing and dataset licensing differ. The training images can be a candidate source, subject to permissions.
-- Detection boxes alone DO NOT supply outer-trim four-corner labels, which need human verified annotation.
+- Page reports CC BY 4.0 and 9,689 version images. These facts alone do not establish suitability.
+- **Rejected for Door Live photo training:** the project cover image and four independent version thumbnails inspected directly are architectural floorplans, not camera photographs of doorway frames. A floorplan door symbol is not a photographic door/frame target.
+- Cover sample inspected: https://source.roboflow.com/0jcL25GGS6YoEAi22mXsNc5W2DV2/00F3GXOpf1yNH8YeNfLJ/original.jpg
+- Version sample IDs inspected: `9d62b54898bf4e27e2da952aad4faa18`, `5a782e9a2032c64fc54ae44d62f71647`, `118d057d351f99033d9048731c5fb4ea`, `3b11dc2ad1759370d768820eb908abfb`.
+- COCO export also requires sign-in, independently confirmed via the site dialog. No account was created or credentials handled.
+- Do not reintroduce this dataset just because its title contains door/window. Do not ask the user to obtain its export for this product.
+- The previously recorded candidate status was premature; architecture is unchanged, data-source selection is corrected before real training.
+
+## Additional photographic data candidates — not yet approved
+- Indoor Object Detection Dataset, Mendeley Data v2, DOI 10.17632/3ggxwf2vpr.2: https://data.mendeley.com/datasets/3ggxwf2vpr/2. Publisher page lists CC BY 4.0, seven indoor classes including door. Public file metadata was retrieved: `Indoor Objects.v1i.voc.zip`, 453,984,831 bytes, publisher SHA256 `3d5a25726f045f230eccbabfc9e3ef4db3916464dcda4d7f48102e7a9ababd20`. Direct file download returned HTTP 403; archive contents/images were NOT inspected or obtained. Need actual sample/provenance/duplicate/annotation-target review before approval. It does not claim four outer-frame corner labels or a window class.
+- DeepDoors2: https://github.com/gasparramoa/DeepDoors2. Official README describes real RGB door/frame photos and detection/segmentation data, but no clear dataset license grant was found in that README; not approved for commercial training on that basis.
 
 ## Candidate B: RF-DETR (fallback only if YOLOX checkpoint gate fails)
 - https://roboflow.com/licensing lists **RF-DETR Nano through Large (except certain enumerated tiers)** and RF-DETR Keypoint Preview as Apache-2.0.
@@ -28,9 +35,9 @@ This document separates **code license, pretrained weights, dataset license and 
 - Roboflow inference API: not local and requires remote images/API credentials.
 
 ## Environment check
-- Python + torch + torchvision available.
-- Outbound HTTP from the current training container failed connecting to GitHub and Roboflow; this was tested, **not inferred**.
-- Pretrained door/window weights and downloadable large training dataset are not locally present yet. No new actual pretrained model training has occurred.
+- Current session: CPU PyTorch 2.15.0+cpu and torchvision 0.29.2+cpu installed and executable; CUDA unavailable.
+- Historical session downloads failed. Current session downloads from official GitHub now succeed; Nano checkpoint checksum and CPU inference are recorded in `training/reports/yolox_nano_preflight_2026_11_11.json`.
+- Official COCO Nano initialization is available locally, not a door/window-trained model. Synthetic optimizer/CLI checks pass; no real-photo fine-tuning has occurred.
 - Next gate: legally permitted pretrained checkpoint and images must be accessible in a training environment; use a separate training machine/runner with authorized network and compute, not fake scratch-training results.
 
 ## Browser runtime

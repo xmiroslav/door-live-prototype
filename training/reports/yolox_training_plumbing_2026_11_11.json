@@ -1,0 +1,17 @@
+{
+  "scope": "synthetic CPU CLI regression; no user photos and no commercial license clearance",
+  "epochs": 2,
+  "losses": [
+    10.774,
+    9.4186
+  ],
+  "checkpoint_written": true,
+  "checksum_written": true,
+  "source_snapshot_written": true,
+  "blind_test_evaluated": false,
+  "production_ready": false,
+  "python_tests_passed": 28,
+  "geometry_tests": "passed",
+  "real_dataset_training": "blocked: unverified annotations",
+  "cuda_tested": false
+}

@@ -1,0 +1,6 @@
+__pycache__/
+*.py[cod]
+# Private training data/model artifacts belong outside the public repository.
+training/runs/
+*.pth
+*.pt

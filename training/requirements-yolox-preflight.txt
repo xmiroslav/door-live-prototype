@@ -1,0 +1,11 @@
+# Install CPU torch/torchvision separately as documented in YOLOX_PREFLIGHT.md.
+loguru==0.7.3
+thop==0.1.1.post2209072238
+ninja==1.13.2
+tabulate==0.10.0
+psutil==7.2.2
+tqdm==4.70.1
+opencv-python==5.0.0.93
+pycocotools==2.0.11
+tensorboard==2.21.0
+numpy==2.3.5

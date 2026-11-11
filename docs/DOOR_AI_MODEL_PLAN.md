@@ -1,4 +1,6 @@
-# Door Live — Doorway AI model integration plan
+# Door Live — archived architecture exploration
+
+**Historical proposals only.** RTMDet / RTMPose and MediaPipe sections below are superseded by `LOCAL_AI_DELIVERY_CONTRACT.md`. The current selected detector baseline is YOLOX-Nano, with a separate corner model and ONNX Runtime Web. Do not implement older candidates from this history.
 
 Status: PREPARATION ONLY. No door-trained weights are installed or deployed.
 

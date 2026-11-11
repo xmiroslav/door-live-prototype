@@ -1,0 +1,17 @@
+{
+  "checkpoint": {
+    "sha256": "cd28f55fbbc1829f99d9ac9b38a16d259a22889739c8728ea877610201feff7b",
+    "allowed_for_training": false,
+    "allowed_for_commercial_redistribution": false,
+    "evidence": "",
+    "reviewer": "",
+    "reviewed_at": ""
+  },
+  "dataset": {
+    "sha256": "",
+    "allowed_for_training": false,
+    "evidence": "",
+    "reviewer": "",
+    "reviewed_at": ""
+  }
+}
