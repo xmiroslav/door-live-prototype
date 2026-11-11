@@ -58,6 +58,7 @@ def main():
     ap.add_argument('--model', required=True, type=Path)
     ap.add_argument('--dataset', required=True, type=Path)
     ap.add_argument('--output', required=True, type=Path)
+    ap.add_argument('--select-penalty', action='store_true', help='research: select ridge penalty using training doorway groups only')
     args = ap.parse_args()
     sha = hashlib.sha256(args.model.read_bytes()).hexdigest()
     if sha != SOURCE_HASH:
@@ -80,7 +81,7 @@ def main():
         with zipfile.ZipFile(args.dataset) as archive:
             for split in ('train', 'val', 'test'):
                 rows = json.loads(archive.read(f'exports/{split}_corners.json'))
-                features, labels, names, sizes = [], [], [], []
+                features, labels, names, sizes, groups = [], [], [], [], []
                 for row in rows:
                     raw = archive.read('images/' + row['file'])
                     target = np.asarray(row['quad_xy_tl_tr_br_bl'], dtype=np.float32) / [row['width'], row['height']]
@@ -91,13 +92,22 @@ def main():
                         labels.append((flip_corners(target) if flip else target).reshape(-1))
                         names.append(row['file'])
                         sizes.append([row['width'], row['height']])
+                        groups.append(row['group'])
                         if split == 'val' and not samples:
                             samples = {'input': sample, 'feature': feature}
-                data[split] = (np.asarray(features), np.asarray(labels), names, sizes)
-        x, y, _, _ = data['train']
+                data[split] = (np.asarray(features), np.asarray(labels), names, sizes, groups)
+        x, y, _, train_sizes, train_groups = data['train']
         # Fixed before evaluation. Scale prevents feature magnitude from defining lambda.
         scale = float(np.sqrt(np.mean(x.astype(np.float64)**2)))
-        w, b = ridge_head(x / scale, y, penalty=100.0)
+        selection = None
+        penalty = 100.0
+        if args.select_penalty:
+            if any(size != [864, 1536] for size in train_sizes):
+                raise ValueError('group selection currently requires 864x1536 images')
+            from group_cross_validation import select_penalty
+            selection = select_penalty(x, y, train_groups, [100., 1000., 10000., 100000., 1000000., 10000000.])
+            penalty = selection['selected_penalty']
+        w, b = ridge_head(x / scale, y, penalty=penalty)
         w, b = (w / scale).astype(np.float32), b.astype(np.float32)
         model = onnx.load(backbone_path)
         del model.graph.output[:]
@@ -117,7 +127,7 @@ def main():
         np.testing.assert_allclose(actual, expected, rtol=1e-4, atol=1e-4)
         results = {}
         for split in ('train', 'val', 'test'):
-            features, labels, names, sizes = data[split]
+            features, labels, names, sizes, groups = data[split]
             predicted = features @ w + b
             errors = [diagonal_error(p.reshape(4,2), t.reshape(4,2), *size)
                       for p, t, size in zip(predicted, labels, sizes)]
@@ -132,7 +142,7 @@ def main():
                   'architecture': 'frozen pretrained Google MobileNet features plus fitted ridge corner head',
                   'detector_changed': False, 'real_photo_training': True,
                   'training_photos': len(data['train'][2])//2, 'training_samples_with_flips': len(x),
-                  'ridge_penalty': 100.0, 'source_sha256': sha,
+                  'ridge_penalty': penalty, 'group_cross_validation': selection, 'source_sha256': sha,
                   'dataset_sha256': hashlib.sha256(args.dataset.read_bytes()).hexdigest(),
                   'onnx_sha256': hashlib.sha256(output_model.read_bytes()).hexdigest(),
                   'onnx_parity_max_error': float(np.max(np.abs(actual-expected))), 'splits': results}
