@@ -1,0 +1,4 @@
+# CPU torch/torchvision installation: see YOLOX_PREFLIGHT.md.
+onnx==1.23.2
+onnxruntime==1.31.1
+onnxscript==0.7.2
