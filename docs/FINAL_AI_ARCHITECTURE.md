@@ -17,3 +17,7 @@ The authoritative requirements and stage gates are in [LOCAL_AI_DELIVERY_CONTRAC
 - Corner model, deployed ONNX door models, verified photo placement and reliable camera tracking remain unfinished.
 
 Older RTMDet, RTMPose and EfficientDet proposals are historical. They are not alternate active implementations.
+
+## Separate evaluated alternative (not selected/activated)
+
+Google Open Images SSD MobileNet V2 has explicit trained-model Apache-2.0 evidence and real Door/Window classes. An 18.5 MB two-class ONNX candidate, numerical equivalence, synthetic train/restore/export and offline WASM execution have been demonstrated. This is a concrete proposal for the detector-only fallback, pending selection and full real-data/phone validation. The agreed baseline and product pipeline have not changed. See `GOOGLE_OPENIMAGES_CHECKPOINT_EVALUATION.md`.

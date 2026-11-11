@@ -1,0 +1,7 @@
+# Separate environment from the PyTorch trainer. Set ORT_DISABLE_TELEMETRY=1 before Python.
+tensorflow-cpu==2.20.0
+tf2onnx==1.17.0
+onnx==1.23.2
+onnxruntime==1.31.1
+numpy==2.3.5
+Pillow==13.0.0

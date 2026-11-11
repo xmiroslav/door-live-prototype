@@ -1,8 +1,11 @@
 """Numerical export test on random weights; not door-recognition validation."""
 import importlib.util
+import os
 from pathlib import Path
 import tempfile
 import unittest
+
+os.environ['ORT_DISABLE_TELEMETRY'] = '1'
 
 @unittest.skipUnless(all(importlib.util.find_spec(name) for name in ('torch','onnx','onnxruntime')),
                      'Install PyTorch, ONNX and ONNX Runtime for export parity test')
@@ -11,6 +14,7 @@ class CornerOnnxTests(unittest.TestCase):
         import numpy as np
         import onnx
         import onnxruntime as ort
+        ort.disable_telemetry_events()
         import torch
         from corner_model import DoorCornerModel
         torch.manual_seed(19);torch.set_num_threads(2)

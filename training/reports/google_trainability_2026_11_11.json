@@ -1,0 +1,15 @@
+{
+  "scope": "Synthetic optimizer/checkpoint/ONNX feasibility only",
+  "trainable_predictor_tensors": 24,
+  "tensors_changed_after_step": 20,
+  "synthetic_loss_before": 0.05636780336499214,
+  "synthetic_loss_after": 0.05634620040655136,
+  "checkpoint_restored_exactly": true,
+  "post_step_onnx_parity_passed": true,
+  "post_step_onnx_max_abs_errors": [
+    8.344650268554688e-07,
+    1.0617077350616455e-07
+  ],
+  "real_photo_training_performed": false,
+  "full_dataset_trainer_implemented": false
+}

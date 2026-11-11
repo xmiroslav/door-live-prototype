@@ -1,0 +1,57 @@
+{
+  "source_bytes": 57801596,
+  "pruned_bytes": 18489449,
+  "classes": [
+    "Door",
+    "Window"
+  ],
+  "source_class_indices": [
+    160,
+    485
+  ],
+  "classifier_heads_pruned": 6,
+  "photos_compared": 21,
+  "max_abs_errors": [
+    0.0,
+    0.0
+  ],
+  "median_pruned_cpu_ms": 16.121466999948098,
+  "scope": "raw numeric parity only; not doorway accuracy or corner evaluation",
+  "final_candidate_file": "DoorLive_Google_OpenImages_Door_Window_Research.onnx",
+  "final_candidate_bytes": 18502049,
+  "final_candidate_sha256": "9f80310593a35585d2e3c4681f5afed7a4a9c1b548977a46305ccf61387eccd6",
+  "weight_license_declared_by_owner": "Apache-2.0",
+  "source_weight_license_evidence": "https://storage.googleapis.com/openimages/web/extras.html",
+  "app_backend_changed": false,
+  "real_frame_corner_accuracy_measured": false,
+  "real_photo_fine_tuning_performed": false,
+  "phone_benchmark": false,
+  "photo_demonstration": {
+    "photos_run": 21,
+    "photos_with_Door_candidate_score_ge_0_30": 11,
+    "metric_scope": "presence of candidate at exploratory threshold, NOT recall/accuracy",
+    "preprocessing": "RGB 300x300 PIL bilinear /255; per-class NMS IoU 0.60"
+  },
+  "annotation_pool": {
+    "downloaded": 296,
+    "selected_source_download_failures": 4,
+    "door_source_box_images": 168,
+    "window_source_box_images": 195,
+    "original_publisher_rights_verified": false,
+    "outer_trim_corner_labels_verified": 0,
+    "training_approved": false
+  },
+  "verification": {
+    "primary_python_suite_total": 41,
+    "primary_python_suite_passed": 39,
+    "primary_python_suite_skipped": 2,
+    "skip_reason": "TensorFlow environment required for trainability/source-label tests",
+    "tensorflow_suite_total": 5,
+    "tensorflow_suite_passed": 5,
+    "covers_both_primary_skips": true,
+    "both_node_suites": "passed",
+    "wasm_probe": "passed",
+    "native_telemetry_disabled_before_import": true,
+    "repeat_checks_with_ip_sockets_denied": true
+  }
+}

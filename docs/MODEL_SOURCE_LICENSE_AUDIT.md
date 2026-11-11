@@ -23,6 +23,13 @@ This document separates **code license, pretrained weights, dataset license and 
 - Indoor Object Detection Dataset, Mendeley Data v2, DOI 10.17632/3ggxwf2vpr.2: https://data.mendeley.com/datasets/3ggxwf2vpr/2. Publisher page lists CC BY 4.0, seven indoor classes including door. Public file metadata was retrieved: `Indoor Objects.v1i.voc.zip`, 453,984,831 bytes, publisher SHA256 `3d5a25726f045f230eccbabfc9e3ef4db3916464dcda4d7f48102e7a9ababd20`. Direct file download returned HTTP 403; archive contents/images were NOT inspected or obtained. Need actual sample/provenance/duplicate/annotation-target review before approval. It does not claim four outer-frame corner labels or a window class.
 - DeepDoors2: https://github.com/gasparramoa/DeepDoors2. Official README describes real RGB door/frame photos and detection/segmentation data, but no clear dataset license grant was found in that README; not approved for commercial training on that basis.
 
+## Evaluated alternative: Google Open Images SSD MobileNet V2 — 2026-11-11
+- Official owner statement explicitly licenses trained models Apache-2.0: https://storage.googleapis.com/openimages/web/extras.html
+- Exact downloaded TF Hub archive and embedded SavedModel are SHA-pinned in `training/google_openimages_candidate.py`. Embedded source label names/MIDs confirm Door index 160 and Window index 485.
+- A research ONNX file with full embedded license and modification/source records was produced (18,502,049 bytes); source code, pruning equivalence, synthetic train/restore/export, and offline WASM parity tested. It is not the active Door Live detector.
+- Full evidence/limitations: `GOOGLE_OPENIMAGES_CHECKPOINT_EVALUATION.md`. Actual corner geometry, phone validation and target-specific fine-tuning remain pending. Backend substitution remains an explicit decision.
+- 296 Open Images photographic candidates obtained with per-image metadata attribution/declared CC BY 2.0 licenses and local SHA256. Annotation license CC BY 4.0. Original publisher license pages, physical-scene grouping and corner labels remain unverified; no commercial-training approval granted automatically.
+
 ## Candidate B: RF-DETR (fallback only if YOLOX checkpoint gate fails)
 - https://roboflow.com/licensing lists **RF-DETR Nano through Large (except certain enumerated tiers)** and RF-DETR Keypoint Preview as Apache-2.0.
 - Require verification of the selected specific release weights, export to compatible ONNX, and actual Safari WASM performance BEFORE replacing the baseline.
@@ -37,7 +44,7 @@ This document separates **code license, pretrained weights, dataset license and 
 ## Environment check
 - Current session: CPU PyTorch 2.15.0+cpu and torchvision 0.29.2+cpu installed and executable; CUDA unavailable.
 - Historical session downloads failed. Current session downloads from official GitHub now succeed; Nano checkpoint checksum and CPU inference are recorded in `training/reports/yolox_nano_preflight_2026_11_11.json`.
-- Official COCO Nano initialization is available locally, not a door/window-trained model. Synthetic optimizer/CLI checks pass; no real-photo fine-tuning has occurred.
+- Official COCO Nano initialization remains available. In addition, a licensed Google Door/Window-pretrained research candidate has now been exported and tested; no real-photo fine-tuning or active backend replacement has occurred.
 - Next gate: legally permitted pretrained checkpoint and images must be accessible in a training environment; use a separate training machine/runner with authorized network and compute, not fake scratch-training results.
 
 ## Browser runtime

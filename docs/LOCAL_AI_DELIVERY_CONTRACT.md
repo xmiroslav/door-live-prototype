@@ -27,7 +27,7 @@
 - Previous scratch-trained tiny CNN had weak holdout results; it is NOT pretrained detector and NOT integrated in production.
 - Current experimental web camera is heuristic-based. The older cloud comparison test is not product infrastructure.
 - Browser annotation editor: `experimental-annotation-review.html` (local files only, JSON import/edit/approve/export). It helps turn provisional labels into verified ones; it is NOT AI.
-- No deployable trained local door/window detector as of 2026-11-11.
+- No accepted/deployed local door/window detector as of 2026-11-11. A Google Door/Window-pretrained research candidate now exists as an evaluated alternative with owner-declared Apache-2.0 weights, fixed ONNX export and offline WASM checks; it has not replaced the approved YOLOX baseline or satisfied frame-corner/mobile acceptance. See `GOOGLE_OPENIMAGES_CHECKPOINT_EVALUATION.md`.
 
 ## Stage gates (no skipping)
 

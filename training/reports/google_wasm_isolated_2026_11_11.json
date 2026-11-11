@@ -1,0 +1,33 @@
+{
+  "runtime": "onnxruntime-web WASM SIMD, Node.js host, single thread",
+  "model_bytes": 18502049,
+  "load_ms": 673.2509670000001,
+  "inference_ms": [
+    121.97744399999999,
+    92.615633,
+    68.48656899999992,
+    83.65897000000018
+  ],
+  "parity": [
+    {
+      "output": "unidoors_boxes:0",
+      "max_abs_error": 3.5762786865234375e-7,
+      "shape": [
+        1,
+        1917,
+        4
+      ]
+    },
+    {
+      "output": "unidoors_scores:0",
+      "max_abs_error": 5.364418029785156e-7,
+      "shape": [
+        1,
+        1917,
+        2
+      ]
+    }
+  ],
+  "phone_benchmark": false,
+  "network_isolation_requested_by_runner": true
+}
