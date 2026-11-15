@@ -32,7 +32,7 @@ function copyDoor(source){
  const token='dl'+Math.random().toString(36).slice(2),rules=[];
  for(let i=0;i<original.length;i++){
   const node=original[i],copy=copies[i];copy.setAttribute('data-door-copy',token+'-'+i);
-  const computed=getComputedStyle(node);copy.style.cssText=declarations(computed);
+  const computed=getComputedStyle(node);copy.style.cssText=declarations(computed);copy.style.setProperty('pointer-events','none','important');
   for(const pseudo of ['::before','::after']){
    const s=getComputedStyle(node,pseudo);if(!s.content||s.content==='none'||s.content==='normal')continue;
    rules.push('[data-door-copy="'+token+'-'+i+'"]'+pseudo+'{'+declarations(s)+'}');
