@@ -25,7 +25,9 @@
 /* Experimental DOM copy: computed styles and native CSS masks remain in the browser. */
 (function(global){
 'use strict';
-function declarations(s){let text='';for(let i=0;i<s.length;i++){const p=s[i],v=s.getPropertyValue(p);if(v)text+=p+':'+v+';'}return text}
+// Keep the snapshot stable even when the configurator's own stylesheet has
+// more specific selectors or important rules for its layers and masks.
+function declarations(s){let text='';for(let i=0;i<s.length;i++){const p=s[i],v=s.getPropertyValue(p);if(v)text+=p+':'+v+' !important;'}return text}
 function copyDoor(source){
  if(!source||!source.isConnected)throw new Error('Door is unavailable');
  const clone=source.cloneNode(true), original=[source,...source.querySelectorAll('*')], copies=[clone,...clone.querySelectorAll('*')];
@@ -33,6 +35,7 @@ function copyDoor(source){
  for(let i=0;i<original.length;i++){
   const node=original[i],copy=copies[i];copy.setAttribute('data-door-copy',token+'-'+i);
   const computed=getComputedStyle(node);copy.style.cssText=declarations(computed);copy.style.setProperty('pointer-events','none','important');
+  copy.style.setProperty('animation','none','important');copy.style.setProperty('transition','none','important');
   for(const pseudo of ['::before','::after']){
    const s=getComputedStyle(node,pseudo);if(!s.content||s.content==='none'||s.content==='normal')continue;
    rules.push('[data-door-copy="'+token+'-'+i+'"]'+pseudo+'{'+declarations(s)+'}');
@@ -84,3 +87,4 @@ global.DoorDomSnapshot={copyDoor};
  function init(){if(document.getElementById(buttonId)||!document.getElementById('bigdoor'))return;const b=document.createElement('button');b.id=buttonId;b.type='button';b.textContent='בדיקת דלת בבית';b.style.cssText='position:fixed;right:18px;bottom:120px;z-index:2147483000;width:78px;height:78px;border-radius:50%;border:0;color:white;background:#369b72;font-weight:bold';b.addEventListener('click',open);document.body.append(b)}
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
+
