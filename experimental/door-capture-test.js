@@ -12,8 +12,11 @@ const VIEWER='https://door-live-ai-trial-miro-91.duskyfalcon1.chatgpt.site';
 const LIBRARY='https://cdn.jsdelivr.net/npm/html2canvas-pro@2.6.4/dist/html2canvas-pro.min.js';
 let libraryPromise;
 function loadLibrary(){
- if(root.html2canvas)return Promise.resolve(root.html2canvas);
- if(!libraryPromise)libraryPromise=new Promise((resolve,reject)=>{const s=document.createElement('script');s.src=LIBRARY;s.onload=()=>root.html2canvas?resolve(root.html2canvas):reject(Error('לא ניתן לטעון את כלי יצירת התמונה'));s.onerror=()=>reject(Error('לא ניתן לטעון את כלי יצירת התמונה'));document.head.appendChild(s)}).catch(e=>{libraryPromise=null;throw e});
+ if(!libraryPromise)libraryPromise=new Promise((resolve,reject)=>{
+  const previous=root.html2canvas,s=document.createElement('script');s.src=LIBRARY;
+  s.onload=()=>{const renderer=root.html2canvas;if(previous===undefined)delete root.html2canvas;else root.html2canvas=previous;renderer&&renderer!==previous?resolve(renderer):reject(Error('לא ניתן לטעון את כלי יצירת התמונה'))};
+  s.onerror=()=>reject(Error('לא ניתן לטעון את כלי יצירת התמונה'));document.head.appendChild(s)
+ }).catch(e=>{libraryPromise=null;throw e});
  return libraryPromise;
 }
 async function captureDoor(target){
