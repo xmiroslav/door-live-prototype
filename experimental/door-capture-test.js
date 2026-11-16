@@ -26,6 +26,7 @@ async function captureDoor(target){
  await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
  const render=await loadLibrary();
  const output=await render(target,{backgroundColor:null,scale:Math.min(3,Math.max(2,root.devicePixelRatio||1)),useCORS:true,logging:false,onclone:(doc,copy)=>{
+  copy.style.setProperty('zoom','1','important');
   for(const el of [copy,...copy.querySelectorAll('*')]){
    const s=doc.defaultView.getComputedStyle(el);
    const mask=s.maskImage||s.webkitMaskImage;
